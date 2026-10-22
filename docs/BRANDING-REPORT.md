@@ -1,0 +1,25 @@
+# PDF Helper 名称、设置与图标调整
+
+## 0.1.13：透明外圈修正
+
+已将主图标和 48/96px 图标的圆形外侧设为透明，黄色圆底和内部图案保留。使用内置 image_gen 图像编辑工具生成透明蒙版，再通过本地原图 RGB 合成与平滑圆周导出清理边缘；没有使用生成结果替换圆内颜色。原尺寸核心区域 1,156,124 个像素逐点验证为完全不透明且与用户原图 RGB 一致；三种尺寸的四角 alpha=0、中心 alpha=255。
+
+使用的提示词要点：“Remove ONLY the white background OUTSIDE the existing large circular boundary; preserve all original interior artwork, colors and proportions; use real PNG alpha and a clean antialiased edge.” 内置工具模式，最终资源位于 plugin/icons/icon.png、icon-48.png、icon-96.png。本地导出中间文件和蒙版处理资料仅在 work/，不随源码分发。
+
+本次只变更图标、版本常量和相关说明；不改变 OCR、PDF、文本整理、设置或更新检查逻辑。
+
+## 0.1.12：更名与设置精简（历史）
+
+基于 0.1.11 在同一源码目录增量修改。当前目录名沿用历史名称，产物统一使用 pdf-helper 前缀。
+
+- 显示名称：manifest、设置面板注册标签、工具与任务菜单、通知/确认标题、任务窗口及当前使用/社区说明更新为 PDF Helper。
+- 设置：删除用户截图中的页顶栏、模型说明、两处保存按钮旁的默认文字。保留空的可访问状态节点，在用户保存/出错时显示反馈；空节点不占空间。
+- 图标：使用用户提供的羊驼 PNG 原图，原尺寸 1254×1254；原文件直接作为 icon.png，48/96px 图标由同一图像等比例缩小生成，没有重画内容。
+- 升级：插件 ID、偏好键、内部脚本接口、凭证域、任务路径和旧存档名称沿用。保留原配置与任务的兼容性；PaddleOCR 服务与模型本身的名称不作产品改名。
+- 版本与打包：manifest/helper/候选清单同步 0.1.12，生成新的 XPI、源码与完整包。此前交付文件保留。
+
+本次为名称、图片资源和界面文案调整，不改变 OCR/PDF、文本整理或更新查询逻辑。已有 LICENSE 保持不变。
+
+验证：现有 JavaScript 213/213、Python 发布工具 3/3 通过；实际设置 XHTML/CSS/JS 的离线浏览器检查在 1250px 浅色、1250px 深色、640px 浅色各 29/29 通过，截图已查看。JS 语法、XHTML XML 和修改的 Python AST 检查通过。对 0.1.11 源码哈希基线核对，helper 仅版本常量变化，纯文本和更新模块字节不变；原图 SHA-256 为 bd2788cae7394ef026ca36860aa629d4494389c5b0b33d64ee042d88d10557d8。
+
+构建器检查 XPI、源码、完整包的 ZIP CRC、资源字节、48/96px 图标尺寸、嵌套 helper 版本与源码。完整包包含 SHA256.json。本候选没有自动安装、重启 Zotero、提交云端识别、推送或公开发布；实际候选安装仍待用户验收。

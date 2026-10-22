@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+<window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" xmlns:html="http://www.w3.org/1999/xhtml" title="引用文本整理">
+ <html:main style="padding:24px;font:14px/1.7 system-ui;overflow:auto;">
+  <html:h1>引用文本整理</html:h1>
+  <html:p>粘贴从 PDF 中复制的文字，按已保存的规则整理。此窗口只在本地处理文字。</html:p>
+  <html:p id="text-mode"></html:p>
+  <html:label for="text-input">原文</html:label>
+  <html:textarea id="text-input" rows="9" style="display:block;width:100%;box-sizing:border-box;font:inherit;" placeholder="在这里粘贴原文…"></html:textarea>
+  <html:label for="text-output">整理后</html:label>
+  <html:textarea id="text-output" rows="9" style="display:block;width:100%;box-sizing:border-box;font:inherit;" readonly="readonly"></html:textarea>
+  <html:div style="margin-top:12px;"><html:button id="text-copy">复制为论文引用文本</html:button> <html:button id="text-original">复制原始文字</html:button> <html:button id="text-settings">打开整理设置</html:button></html:div>
+  <html:p id="text-message" role="status"></html:p>
+  <html:p>此粘贴窗口不会修改 PDF、OCR 或批注。另有“新建高亮时自动整理并保存文字”开关，会实际修改新注释的摘录；不自动生成出处、页码或参考文献格式。</html:p>
+ </html:main>
+ <script src="chrome://paddleocrrepair/content/textDialog.js" />
+</window>

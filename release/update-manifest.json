@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "published": false,
+  "addonId": "paddleocr-pdf-repair@local.tools",
+  "latestVersion": "0.1.13",
+  "minZoteroVersion": "10.0",
+  "maxZoteroVersion": "10.0.*",
+  "releaseNotes": "修正 PDF Helper 图标外圈白底，将圆形外侧设为透明，保留原有图案、设置与功能。此版本尚未发布；GitHub 仓库与清单地址已配置，中文社区详情页仍待收录后填写。",
+  "communityUrl": null
+}

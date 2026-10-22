@@ -1,0 +1,13 @@
+pref('extensions.paddleocrrepair.baseURL', 'https://paddleocr.aistudio-app.com');
+pref('extensions.paddleocrrepair.model', 'PP-StructureV3');
+pref('extensions.paddleocrrepair.dailyThreshold', 20000);
+pref('extensions.paddleocrrepair.concurrency', 1);
+pref('extensions.paddleocrrepair.partConcurrency', 2);
+pref('extensions.paddleocrrepair.autoReplace', true);
+pref('extensions.paddleocrrepair.backupDir', '');
+pref('extensions.paddleocrrepair.sidecars', 'archive');
+pref('extensions.paddleocrrepair.pythonPath', '');
+pref('extensions.paddleocrrepair.legacyPDFScale', '0');
+pref('extensions.paddleocrrepair.text.enabled', true);
+pref('extensions.paddleocrrepair.text.options', '{"preset":"paper"}');
+pref('extensions.paddleocrrepair.text.cleanNewHighlights', true);

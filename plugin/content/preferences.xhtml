@@ -1,0 +1,112 @@
+<vbox xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" xmlns:html="http://www.w3.org/1999/xhtml">
+ <html:link rel="stylesheet" href="chrome://paddleocrrepair/content/preferences.css" />
+ <html:div id="pocr-preferences">
+  <html:div class="pocr-layout">
+   <html:nav class="pocr-nav" aria-label="设置分类">
+    <html:details open="open"><html:summary>阅读与引用</html:summary><html:div class="pocr-subnav">
+     <html:button type="button" data-page-target="text" data-page-group="text" data-page-label="阅读与引用 / 高亮与复制" aria-controls="pocr-page-text" aria-current="page">高亮与复制</html:button>
+     <html:button type="button" data-page-target="preview" data-page-group="text" data-page-label="阅读与引用 / 效果预览" aria-controls="pocr-page-preview">效果预览</html:button>
+    </html:div></html:details>
+    <html:details open="open"><html:summary>OCR 与 PDF</html:summary><html:div class="pocr-subnav">
+     <html:button type="button" data-page-target="account" data-page-group="ocr" data-page-label="OCR 与 PDF / 账号与模型" aria-controls="pocr-page-account">账号与模型</html:button>
+     <html:button type="button" data-page-target="speed" data-page-group="ocr" data-page-label="OCR 与 PDF / 识别速度与提醒" aria-controls="pocr-page-speed">识别速度与提醒</html:button>
+     <html:button type="button" data-page-target="files" data-page-group="ocr" data-page-label="OCR 与 PDF / 文件保存与备份" aria-controls="pocr-page-files">文件保存与备份</html:button>
+    </html:div></html:details>
+    <html:details open="open"><html:summary>高级与维护</html:summary><html:div class="pocr-subnav">
+     <html:button type="button" data-page-target="python" data-page-group="ocr" data-page-label="高级与维护 / Python 环境" aria-controls="pocr-page-python">Python 环境</html:button>
+     <html:button type="button" data-page-target="legacy" data-page-group="ocr" data-page-label="高级与维护 / 旧版识别结果" aria-controls="pocr-page-legacy">旧版识别结果</html:button>
+     <html:button type="button" data-page-target="maintenance" data-page-group="ocr" data-page-label="高级与维护 / 任务与清理" aria-controls="pocr-page-maintenance">任务与清理</html:button>
+     <html:button type="button" data-page-target="updates" data-page-group="updates" data-page-label="高级与维护 / 检查更新" aria-controls="pocr-page-updates">检查更新</html:button>
+    </html:div></html:details>
+   </html:nav>
+   <html:main class="pocr-main">
+    <html:p id="pocr-settings-location" class="pocr-location">阅读与引用 / 高亮与复制</html:p>
+    <html:div id="pocr-text-settings" data-settings-group="text">
+     <html:section id="pocr-page-text" data-settings-page="text" class="pocr-page" aria-labelledby="pocr-title-text">
+      <html:header class="pocr-page-title"><html:span class="pocr-badge">本机处理 · 不消耗 OCR 额度</html:span><html:h2 id="pocr-title-text">高亮与复制</html:h2><html:p>整理摘录里的误换行、多余空格和标点，方便用于论文和笔记。所有能选中文字、创建高亮的 PDF 都可以用。</html:p></html:header>
+      <html:div class="pocr-card">
+       <html:label class="pocr-check"><html:input id="text-enabled" type="checkbox" /><html:span>开启引用文本整理<html:small>为复制文字和新建高亮使用下面的整理规则。</html:small></html:span></html:label>
+       <html:label class="pocr-check"><html:input id="text-clean-new" type="checkbox" /><html:span>新建高亮时自动整理并保存文字<html:small>侧边栏直接使用整理后的注释文字，不叠加显示层。也适用于下划线摘录。</html:small></html:span></html:label>
+       <html:p class="pocr-callout pocr-caution">这会实际修改新注释的摘录，不保留修改前的副本。关闭后只停止后续整理，不还原已保存内容，也不批量改写旧注释。注释可按 Zotero 设置同步；PDF 和 OCR 原文件保持不变。</html:p>
+       <html:p class="pocr-help">已有高亮也可以处理：在阅读器侧边栏选中一条或多条高亮，右键选择“整理并保存选中高亮文字…”，确认后只保存这些选中项。可以关闭自动整理、保留手动处理；引用文本整理总开关仍需开启。</html:p>
+      </html:div>
+      <html:div class="pocr-card">
+       <html:h3>整理方式</html:h3><html:label class="pocr-field" for="text-preset"><html:span>先选一套常用规则</html:span><html:select id="text-preset"><html:option value="paper">论文引用（推荐）</html:option><html:option value="light">轻度整理</html:option><html:option value="custom">自定义</html:option></html:select></html:label><html:p id="text-preset-description" class="pocr-help"></html:p>
+       <html:label class="pocr-field" for="text-punctuation"><html:span>标点格式</html:span><html:select id="text-punctuation"><html:option value="smart">自动判断（推荐）</html:option><html:option value="chinese">统一为中文标点</html:option><html:option value="english">统一为英文标点</html:option><html:option value="preserve">保持原文</html:option></html:select></html:label><html:p id="text-punctuation-description" class="pocr-help"></html:p>
+      </html:div>
+      <html:details class="pocr-card pocr-rules"><html:summary>查看和调整具体整理规则</html:summary>
+       <html:h3>换行与空格</html:h3>
+       <html:label class="pocr-check"><html:input data-text-rule="repairLineBreaks" type="checkbox" /><html:span>合并一句话中的误换行<html:small>把 PDF 排版拆开的句子接起来，尽量保留真正的段落。</html:small></html:span></html:label>
+       <html:label class="pocr-check"><html:input data-text-rule="removeChineseSpaces" type="checkbox" /><html:span>去掉中文之间的多余空格<html:small>中国 现代 文学 → 中国现代文学；也处理 PDF 中常见的特殊空格，不影响英文单词间的空格。</html:small></html:span></html:label>
+       <html:label class="pocr-check"><html:input data-text-rule="collapseSpaces" type="checkbox" /><html:span>整理重复空格<html:small>连续多个空格整理为一个，保留英文单词间必要的空格。</html:small></html:span></html:label>
+       <html:label class="pocr-check"><html:input data-text-rule="punctuationSpaces" type="checkbox" /><html:span>清理标点旁的多余空格<html:small>例如：鲁迅认为 ， 如此 。 → 鲁迅认为，如此。中文引号前后的多余空格也会清理。</html:small></html:span></html:label>
+       <html:label class="pocr-check"><html:input data-text-rule="keepParagraphs" type="checkbox" /><html:span>保留原有段落<html:small>保留空行、缩进段和明显的标题、列表。关闭后也不会直接删掉所有换行。</html:small></html:span></html:label>
+       <html:h3>英文与混排</html:h3>
+       <html:label class="pocr-check"><html:input data-text-rule="dehyphenate" type="checkbox" /><html:span>合并英文换行断词<html:small>litera- 换行 ture → literature；不能确定的断词保留。</html:small></html:span></html:label>
+       <html:label class="pocr-check"><html:input data-text-rule="normalizeLetters" type="checkbox" /><html:span>整理字母和数字格式<html:small>ＡＢＣ１２３ → ABC123。</html:small></html:span></html:label>
+       <html:label class="pocr-check"><html:input data-text-rule="mixedSpaces" type="checkbox" /><html:span>在中文和英文之间自动加空格<html:small>鲁迅Lu Xun研究 → 鲁迅 Lu Xun 研究。默认关闭，按排版习惯选择。</html:small></html:span></html:label>
+       <html:h3>谨慎使用</html:h3><html:label class="pocr-check"><html:input data-text-rule="removeOcrArtifacts" type="checkbox" /><html:span>尝试清理 OCR 异常字符<html:small>只删除少量占位符和控制符，可能误删原刊特殊符号；默认关闭。</html:small></html:span></html:label>
+      </html:details>
+      <html:p class="pocr-help">网址、DOI、邮箱、小数和版本号等会自动保护。诗歌、旧式排版和严格引文仍建议核对原文。</html:p>
+     </html:section>
+     <html:section id="pocr-page-preview" data-settings-page="preview" class="pocr-page" hidden="hidden" aria-labelledby="pocr-title-preview">
+      <html:header class="pocr-page-title"><html:span class="pocr-badge">预览不保存 · 不上传</html:span><html:h2 id="pocr-title-preview">先试一段文字</html:h2><html:p>这里使用你在“高亮与复制”中选择的规则，包括尚未保存的调整。预览和复制都不会修改文献或注释。</html:p></html:header>
+      <html:div class="pocr-card"><html:label class="pocr-field" for="text-preview-input"><html:span>原文</html:span><html:textarea id="text-preview-input" rows="7"></html:textarea></html:label><html:label class="pocr-field" for="text-preview-output"><html:span>整理后</html:span><html:textarea id="text-preview-output" rows="7" readonly="readonly"></html:textarea></html:label><html:div class="pocr-actions"><html:button type="button" id="text-preview-copy">复制整理后文字</html:button><html:button type="button" id="text-preview-original">复制原始文字</html:button></html:div></html:div>
+     </html:section>
+     <html:footer class="pocr-savebar"><html:button type="button" id="text-save" class="pocr-primary">保存引用整理设置</html:button><html:p id="text-settings-message" role="status" aria-live="polite"></html:p></html:footer>
+    </html:div>
+    <html:div id="pocr-ocr-settings" data-settings-group="ocr" hidden="hidden">
+     <html:section id="pocr-page-account" data-settings-page="account" class="pocr-page" hidden="hidden" aria-labelledby="pocr-title-account">
+      <html:header class="pocr-page-title"><html:span class="pocr-badge">需要新识别扫描件时设置</html:span><html:h2 id="pocr-title-account">账号与模型</html:h2><html:p>云端负责识别文字，本机负责生成可搜索 PDF。如果只合并已有 MD/JSON，不需要填写访问令牌。</html:p></html:header>
+      <html:div class="pocr-card"><html:h3>连接云端识别服务</html:h3>
+       <html:label class="pocr-field" for="pocr-baseURL"><html:span>识别服务地址</html:span><html:input id="pocr-baseURL" type="url" spellcheck="false" /></html:label><html:p class="pocr-help">使用官方服务时保持默认地址。只有使用可信代理时才修改，必须以 https:// 开头；令牌会发送到这个地址。</html:p>
+       <html:label class="pocr-field" for="pocr-token"><html:span>AI Studio 访问令牌（Access Token）</html:span><html:input id="pocr-token" type="password" autocomplete="off" placeholder="更换时填写；留空保留已有令牌" /></html:label><html:p id="pocr-token-state" class="pocr-help" role="status">正在检查令牌状态…</html:p><html:p class="pocr-help">在 AI Studio 账户中取得后粘贴到这里。令牌类似账户密码，不要截图或发给别人；保存后不会显示完整内容。</html:p>
+       <html:div class="pocr-actions"><html:button type="button" id="pocr-delete-token" class="pocr-danger">删除已保存的令牌</html:button></html:div>
+      </html:div>
+      <html:div class="pocr-card"><html:h3>使用哪个识别模型</html:h3><html:label class="pocr-field" for="pocr-model"><html:span>默认模型</html:span><html:select id="pocr-model"><html:option>PP-StructureV3</html:option><html:option>PaddleOCR-VL</html:option><html:option>PaddleOCR-VL-1.5</html:option><html:option>PaddleOCR-VL-1.6</html:option></html:select></html:label></html:div>
+     </html:section>
+     <html:section id="pocr-page-speed" data-settings-page="speed" class="pocr-page" hidden="hidden" aria-labelledby="pocr-title-speed">
+      <html:header class="pocr-page-title"><html:h2 id="pocr-title-speed">识别速度与提醒</html:h2><html:p>控制同时发送多少任务。云端排队时间取决于服务状态，增加并行数不保证固定提速。</html:p></html:header>
+      <html:div class="pocr-card"><html:h3>同时处理多少内容</html:h3><html:label class="pocr-field" for="pocr-concurrency"><html:span>同时处理的 PDF 数量</html:span><html:select id="pocr-concurrency"><html:option value="1">1 份（推荐）</html:option><html:option value="2">2 份</html:option></html:select></html:label><html:p class="pocr-help">选择多个 PDF 时使用。普通用户保持 1 份即可，完成后自动处理下一份。</html:p>
+       <html:label class="pocr-field" for="pocr-partConcurrency"><html:span>同一大文件同时识别的段数</html:span><html:select id="pocr-partConcurrency"><html:option value="2">2 段（推荐）</html:option><html:option value="1">1 段（网络不稳时）</html:option></html:select></html:label><html:p class="pocr-help">超过 50 MB 或 1,000 页的 PDF 会按连续页分段，每段尽量接近 48 MB。全部任务合计最多同时识别两段，结果按原页序合并；本机写 PDF 仍逐份进行。</html:p></html:div>
+      <html:div class="pocr-card"><html:h3>页数提醒</html:h3><html:label class="pocr-field" for="pocr-dailyThreshold"><html:span>本插件一天处理多少页时提醒</html:span><html:input id="pocr-dailyThreshold" type="number" min="1" step="1" /></html:label><html:p class="pocr-help">默认 20,000 页。这是本插件的本地提醒线，不是账户剩余额度，也不包含网页或其他工具的使用量。达到提醒线时任务暂停，等待你确认。</html:p></html:div>
+     </html:section>
+     <html:section id="pocr-page-files" data-settings-page="files" class="pocr-page" hidden="hidden" aria-labelledby="pocr-title-files">
+      <html:header class="pocr-page-title"><html:h2 id="pocr-title-files">文件保存与备份</html:h2><html:p>决定生成后的 PDF 如何使用，以及识别资料放在哪里。修改设置不会立即移动已有文件。</html:p></html:header>
+      <html:div class="pocr-card"><html:h3>生成后的 PDF</html:h3><html:label class="pocr-check"><html:input id="pocr-autoReplace" type="checkbox" /><html:span>检查通过后自动替换原 PDF<html:small>替换前自动备份；页面画面和 Zotero 附件身份保持不变。关闭后只生成新文件，可在任务窗口打开。</html:small></html:span></html:label>
+       <html:label class="pocr-field" for="pocr-backupDir"><html:span>原 PDF 备份文件夹（通常留空）</html:span><html:input id="pocr-backupDir" type="text" placeholder="留空使用 Zotero 配置目录下的备份文件夹" /></html:label><html:p class="pocr-help">想自行管理备份时，填写本机文件夹完整路径。备份用于“恢复原始 PDF”，不会随 Zotero 自动同步。</html:p></html:div>
+      <html:div class="pocr-card"><html:h3>识别资料 MD / JSON</html:h3><html:p class="pocr-help">MD 是识别后的文字，JSON 记录文字及位置。保留它们可以重新生成文字层，不必再次识别。</html:p><html:label class="pocr-field" for="pocr-sidecars"><html:span>识别资料保存位置</html:span><html:select id="pocr-sidecars"><html:option value="archive">独立存档集合（推荐）</html:option><html:option value="hidden">仅保存在本机，不显示为附件</html:option><html:option value="import">放在原文献下，作为普通附件</html:option><html:option value="link">放在原文献下，作为链接附件</html:option></html:select></html:label><html:p id="pocr-sidecars-help" class="pocr-callout"></html:p><html:p class="pocr-help">普通附件的跨设备下载取决于你的 Zotero 文件同步设置和存储空间。任务历史、环境和恢复备份始终只保存在本机。</html:p><html:p class="pocr-help">想整理已有资料：到任务窗口选中已完成任务，点“按当前设置收纳 MD/JSON”。只改变资料位置，不重新 OCR；同步附件尚未下载时，请先下载。</html:p></html:div>
+     </html:section>
+     <html:section id="pocr-page-python" data-settings-page="python" class="pocr-page" hidden="hidden" aria-labelledby="pocr-title-python">
+      <html:header class="pocr-page-title"><html:span class="pocr-badge">通常不用修改</html:span><html:h2 id="pocr-title-python">Python 环境</html:h2><html:p>Python 在本机负责处理 PDF。只用引用文本整理不需要它；生成、检查、备份和恢复 PDF 时需要。</html:p></html:header>
+      <html:div class="pocr-card"><html:h3>让插件找到 Python</html:h3><html:label class="pocr-field" for="pocr-pythonPath"><html:span>Python 程序位置（留空自动查找）</html:span><html:input id="pocr-pythonPath" type="text" placeholder="通常留空；找不到 Python 时再填写" /></html:label><html:p class="pocr-help">需要已安装的 64 位 Python 3.10 或更高版本。首次处理 PDF 时，插件会建立自己的环境并安装必要的 PDF、网络工具，不下载本地 OCR 模型，也不改动系统 Python 包。</html:p>
+       <html:details><html:summary>自动查找失败时怎么填</html:summary><html:p>填写程序文件的完整路径，不是安装文件夹，也不要在路径外再加引号。</html:p><html:p class="pocr-help">Windows 示例</html:p><html:code>C:\Python312\python.exe</html:code><html:p class="pocr-help">macOS 示例（Apple Silicon）</html:p><html:code>/opt/homebrew/bin/python3</html:code><html:p class="pocr-help">macOS 可在终端运行 <html:code>which python3</html:code> 查路径；Windows 可运行 <html:code>py -V:3.12 -c "import sys; print(sys.executable)"</html:code>。检查返回版本与位数后再填。</html:p></html:details>
+      </html:div><html:p class="pocr-callout">还没安装 Python？完整包中的《Windows 与 macOS 安装使用说明》有逐步教程。不需要手工启动后台程序。</html:p>
+     </html:section>
+     <html:section id="pocr-page-legacy" data-settings-page="legacy" class="pocr-page" hidden="hidden" aria-labelledby="pocr-title-legacy">
+      <html:header class="pocr-page-title"><html:span class="pocr-badge">仅兼容旧资料时使用</html:span><html:h2 id="pocr-title-legacy">旧版识别结果</html:h2><html:p>只有合并旧 JSON、并提示缺少页面尺寸时，才可能用到这个选项。新版结果通常不用改。</html:p></html:header>
+      <html:div class="pocr-card"><html:label class="pocr-field" for="pocr-legacyPDFScale"><html:span>旧 JSON 的坐标倍率</html:span><html:input id="pocr-legacyPDFScale" type="number" min="0" max="8" step="any" /></html:label><html:p class="pocr-help">0 表示不猜测倍率。如果确认旧结果按 PDF 的 2 倍尺寸识别，才填 2。插件优先使用 JSON 已有的真实页面尺寸；此设置不会重新 OCR，也不会修改源 JSON。</html:p><html:p class="pocr-callout pocr-caution">不确定时保持 0。填错可能造成文字选区偏移，不能把缩略图或扫描图片的像素尺寸直接当作识别坐标尺寸。旧版常见 144 DPI（倍率 2），但不是所有文件都适用。</html:p></html:div>
+     </html:section>
+     <html:section id="pocr-page-maintenance" data-settings-page="maintenance" class="pocr-page" hidden="hidden" aria-labelledby="pocr-title-maintenance">
+      <html:header class="pocr-page-title"><html:h2 id="pocr-title-maintenance">任务与清理</html:h2><html:p>查看进度、继续原任务或清理可重新生成的缓存。等待时间长时，先看原任务，不要重复提交识别。</html:p></html:header>
+      <html:div class="pocr-card"><html:h3>查看任务</html:h3><html:p class="pocr-help">任务窗口显示上传、排队、解析、下载和本机生成阶段，也可恢复暂停任务、打开结果或整理识别资料。</html:p><html:div class="pocr-actions"><html:button type="button" id="pocr-status">打开任务与进度</html:button></html:div></html:div>
+      <html:div class="pocr-card"><html:h3>清理临时缓存</html:h3><html:p class="pocr-help">只删除可以重新生成的派生缓存。任务记录、原始响应、MD/JSON、PDF 和恢复备份都会保留。</html:p><html:div class="pocr-actions"><html:button type="button" id="pocr-clear-cache">清理派生缓存…</html:button></html:div></html:div>
+      <html:div class="pocr-card"><html:h3>数据与安全</html:h3><html:p class="pocr-help">访问令牌由 Zotero 的密码管理功能保存，不写进任务日志。后台服务只监听本机，并使用随机凭证。</html:p><html:p class="pocr-help">任务与备份在 Zotero 配置目录的 <html:code>paddleocr-pdf-repair</html:code> 文件夹中，请保护好操作系统账户和此目录。已提交的云端任务不能通过“取消”退回额度。</html:p></html:div>
+     </html:section>
+     <html:footer class="pocr-savebar"><html:button type="button" id="pocr-save" class="pocr-primary">保存 OCR / PDF 设置</html:button><html:p id="pocr-message" role="status" aria-live="polite"></html:p></html:footer>
+    </html:div>
+    <html:div data-settings-group="updates" hidden="hidden">
+     <html:section id="pocr-page-updates" data-settings-page="updates" class="pocr-page" hidden="hidden" aria-labelledby="pocr-title-updates">
+      <html:header class="pocr-page-title"><html:h2 id="pocr-title-updates">检查更新</html:h2><html:p>点击后查询最新稳定版。发现适用的新版时，可前往 Zotero 中文社区下载 .xpi 并手动安装。</html:p></html:header>
+      <html:div class="pocr-card">
+       <html:p id="pocr-update-version">当前安装版本：正在读取……</html:p>
+       <html:div class="pocr-actions"><html:button type="button" id="pocr-update-check" class="pocr-primary">检查更新</html:button><html:button type="button" id="pocr-update-download" hidden="hidden">前往中文社区下载</html:button></html:div>
+       <html:p id="pocr-update-status" role="status" aria-live="polite">只在点击时获取公开版本信息，不上传文献、识别结果或访问令牌。</html:p>
+       <html:div id="pocr-update-details" hidden="hidden"><html:p id="pocr-update-requirements" class="pocr-callout"></html:p><html:h3>更新说明</html:h3><html:p id="pocr-update-notes" class="pocr-release-notes"></html:p></html:div>
+      </html:div>
+     </html:section>
+    </html:div>
+   </html:main>
+  </html:div>
+ </html:div>
+</vbox>

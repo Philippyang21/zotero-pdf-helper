@@ -1,0 +1,11 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict'),path=require('node:path');
+const file=process.argv[2]||path.join(__dirname,'../work/text-dom.html');
+const html=fs.readFileSync(file,'utf8');
+assert.ok(html.includes('data-qa-complete="true"'),'Browser checks did not complete');
+const match=html.match(/<pre id="qa-result"[^>]*>(.*?)<\/pre>/s);assert.ok(match,'No browser result');
+const result=JSON.parse(match[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
+for(const check of result.results)console.log((check.passed?'PASS ':'FAIL ')+check.name+(check.error?' — '+check.error:''));
+assert.equal(result.passed,true,'One or more browser UI checks failed');
+assert.equal(result.results.length,29,'Unexpected number of UI checks');
+console.log(result.count+'/'+result.count+' browser DOM checks passed');

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "repositoryUrl": null,
+  "manifestUrl": null,
+  "communityUrl": null,
+  "allowedManifestHosts": ["raw.githubusercontent.com"],
+  "allowedCommunityHosts": ["zotero-chinese.com"],
+  "timeoutMs": 10000,
+  "maxResponseBytes": 65536
+}

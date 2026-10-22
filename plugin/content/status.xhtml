@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+<window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" xmlns:html="http://www.w3.org/1999/xhtml" title="PDF Helper — 任务进度">
+ <html:style>
+  #app {font:14px system-ui,sans-serif;color:#183247;background:#f3f6f9;padding:24px;overflow:auto;height:100%;box-sizing:border-box;}
+  h1 {font-size:24px;margin:0;} h2 {font-size:19px;margin:0 0 8px;} p {line-height:1.65;margin:8px 0;}
+  button {font:inherit;padding:8px 12px;margin:3px;border:1px solid #b7cad7;border-radius:7px;background:white;color:#183247;cursor:pointer;}
+  button:hover {background:#e8f1ff;} button:disabled {opacity:.45;cursor:default;}
+  .card {background:white;border:1px solid #d5e1ea;border-radius:12px;padding:18px;margin:16px 0;}
+  #summary {font-size:15px;color:#4d6578;} #busy {background:#e7f1ff;padding:14px;border-radius:9px;}
+  table {border-collapse:collapse;width:100%;background:white;margin:16px 0;table-layout:fixed;}
+  th,td {text-align:left;padding:12px;border-bottom:1px solid #d8e2e8;vertical-align:top;overflow-wrap:anywhere;}
+  th {background:#e8f0f4;} tr.selected {background:#e7f2ff;} tr {cursor:pointer;}
+  th:nth-child(1) {width:29%;} th:nth-child(2) {width:16%;} th:nth-child(3) {width:36%;} th:nth-child(4) {width:19%;}
+  progress {width:100%;height:17px;accent-color:#2876c7;display:block;margin:7px 0;}
+  .success progress {accent-color:#218455;} .badge {display:inline-block;padding:5px 8px;border-radius:6px;background:#e6edf5;font-weight:600;}
+  .badge.success {background:#dff3e6;color:#185e3e;} .badge.error {background:#fbe2df;color:#9d2d22;} .badge.paused {background:#fff0d4;color:#865408;}
+  #selected-panel.success {border-color:#7cc09a;background:#f1fbf4;} #selected-panel.error {border-color:#e9a299;background:#fff6f4;}
+  #selected-title {font-size:22px;} #selected-progress progress {height:23px;} #selected-name {font-weight:600;overflow-wrap:anywhere;}
+  #steps {display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 0;} #steps span {padding:6px 12px;background:#e9eef4;border-radius:20px;color:#607486;}
+  #steps .current {background:#2876c7;color:white;} #steps .passed {background:#dcefe4;color:#246043;}
+  #message {white-space:pre-wrap;color:#a03a20;min-height:20px;} #detail {white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.7 system-ui,sans-serif;}
+  .muted {color:#526b7b;font-size:12px;margin-top:5px;} [hidden] {display:none!important;}
+  .timing {white-space:pre-line;font-size:12px;line-height:1.7;}
+  #segment-panel th {width:auto;} #segment-panel tr {cursor:default;}
+ </html:style>
+ <html:main id="app">
+  <html:h1>PDF Helper</html:h1>
+  <html:p id="summary" aria-live="polite">正在连接本地处理服务…</html:p>
+  <html:div id="busy" hidden="hidden"><html:span id="busy-text"></html:span><html:progress aria-label="准备任务" /></html:div>
+  <html:div><html:button id="settings">设置</html:button><html:button id="refresh">刷新</html:button><html:button id="resume">恢复 / 重试</html:button><html:button id="cancel">取消</html:button><html:button id="apply">重试保存与替换</html:button><html:button id="open">打开生成的 PDF</html:button></html:div>
+  <html:p id="message" role="status"></html:p>
+  <html:section id="selected-panel" class="card" aria-live="polite" hidden="hidden">
+   <html:h2 id="selected-title"></html:h2><html:p id="selected-name"></html:p>
+   <html:div id="selected-progress"></html:div><html:p id="selected-caption"></html:p><html:p id="selected-timing" class="timing"></html:p><html:div id="steps"></html:div>
+   <html:div id="segment-panel" hidden="hidden"><html:table><html:thead><html:tr><html:th>页段</html:th><html:th>当前状态</html:th><html:th>云端已解析</html:th><html:th>处理用时</html:th><html:th>最近查询</html:th></html:tr></html:thead><html:tbody id="segments"></html:tbody></html:table></html:div>
+   <html:p class="muted">排队与解析耗时按客户端观察累计，可能有几秒误差；并行时各段用时会重叠。旧任务升级前的阶段耗时无法补记。最近查询持续更新表示连接仍在工作。</html:p>
+  </html:section>
+  <html:table><html:thead><html:tr><html:th>PDF / 模式</html:th><html:th>状态</html:th><html:th>当前阶段进度</html:th><html:th>耗时</html:th></html:tr></html:thead><html:tbody id="jobs"></html:tbody></html:table>
+  <html:p id="empty">暂无任务。右键 PDF 可执行识别、合并或恢复。</html:p>
+  <html:section class="card"><html:h2>识别资料与任务详情</html:h2>
+   <html:div><html:button id="sidecars">打开 MD/JSON 目录</html:button><html:button id="archive">查看存档条目</html:button><html:button id="organize">按当前设置收纳 MD/JSON</html:button><html:button id="bind">填写已提交任务 ID</html:button><html:button id="folder">打开全部记录</html:button></html:div>
+   <html:p id="detail">选择任务查看结果与备份。收纳不会重新 OCR 或转换 PDF。</html:p>
+  </html:section>
+  <html:section class="card"><html:h2 id="quota-status">账户额度：未接入查询</html:h2>
+   <html:p id="usage"></html:p>
+   <html:p class="muted">公开 API 文档中尚未找到可核验的账户用量查询接口。插件不以每日上限减去本地记录来推算账户余额，也不读取浏览器登录凭证。</html:p>
+   <html:button id="quota">打开 PaddleOCR 官方页面</html:button><html:button id="quota-rules">查看官方配额规则</html:button>
+  </html:section>
+  <html:p class="muted">云端返回页数时显示真实识别进度；未返回时显示等待状态，不估算百分比。识别到 100% 后仍需下载并生成 PDF。取消不会退回服务端已处理的额度；恢复会复用原任务。合并已有结果始终在本机完成。</html:p>
+ </html:main>
+ <script src="chrome://paddleocrrepair/content/progress.js" />
+ <script src="chrome://paddleocrrepair/content/status.js" />
+</window>
