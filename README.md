@@ -23,7 +23,6 @@ PDF OCR Helper依托paddleocr，为 Zotero 中的图片型 PDF 添加可搜索�
 - [安装](#安装)
 - [使用](#使用)
 - [数据与隐私](#数据与隐私)
-- [常见问题](#常见问题)
 - [致谢与许可证](#致谢与许可证)
 
 ## 视频教程
@@ -136,32 +135,6 @@ MD/JSON 可以放入独立存档、插件本机目录，或作为原文献下的
 Access Token 使用 Zotero 的密码管理功能保存，不写入普通设置或任务日志；下载识别结果时不向对象存储转发 API Authorization。本机辅助服务仅监听回环地址，并使用随机凭证。
 
 插件内的页数阈值是本机提醒，不代表账户剩余额度。服务费用、配额与数据处理规则以所用服务的说明为准，详见 [API 说明](docs/API.md)。
-
-## 常见问题
-
-<details>
-<summary>为什么扫描 PDF 仍不能搜索或复制？</summary>
-
-扫描页只有图片时，需要先用云端 OCR，或合并已有 MD 与定位 JSON。文字整理工具本身不会识别图片。任务显示完成后，可重新打开 PDF 再检查搜索与复制。
-</details>
-
-<details>
-<summary>直接从 PDF 复制的文字，为什么没有跟着高亮一起变化？</summary>
-
-PDF 文字层和 Zotero 注释摘录是两套数据。整理并保存高亮会修改注释摘录；直接在 PDF 上选择文字仍读取原文字层。需要整理后的文字时，使用“复制为论文引用文本”。
-</details>
-
-<details>
-<summary>为什么“检查更新”提示尚未配置？</summary>
-
-当前尚无本插件的真实中文社区详情页，因此三项客户端更新 URL 保持为空，手动检查更新尚未启用。GitHub 首发后可从 Releases 手动下载 XPI，覆盖安装。取得社区详情页后，再发布带完整配置的新版本；此功能不自动下载或安装。
-</details>
-
-<details>
-<summary>支持 macOS 吗？</summary>
-
-安装包与路径探测已按 Windows x64、macOS Intel / Apple Silicon 编写。当前候选已在 Windows x64 完成合并、恢复和高亮保存实测；目标 Mac 上的完整安装与处理仍待实测。Python 的安装与路径填写见 [安装说明](docs/USAGE.md)。
-</details>
 
 ## 致谢与许可证
 
