@@ -1,35 +1,49 @@
-/* global Zotero, Services, IOUtils, PathUtils, Cc, Ci, ChromeUtils */
+/* global Zotero, Services, Cc, Ci */
+// Adapted from windingwind/zotero-plugin-template/addon/bootstrap.js (AGPL-3.0-or-later).
+// Upstream derives this bootstrap from Zotero's Make It Red example and developer docs.
 'use strict';
-var Repair;
 var chromeHandle;
+var pluginContext;
+var pluginStartup;
+var pluginStartupCleanup;
 
 async function startup({id,version,rootURI}) {
   const aom = Cc['@mozilla.org/addons/addon-manager-startup;1'].getService(Ci.amIAddonManagerStartup);
   chromeHandle = aom.registerChrome(Services.io.newURI(rootURI+'manifest.json'),[
     ['content','paddleocrrepair','content/']
   ]);
-  Services.scriptloader.loadSubScript(rootURI+'repair.js',this);
+  const ctx={rootURI};
+  for(const name of ['Zotero','Services','IOUtils','PathUtils','Cc','Ci','ChromeUtils','Components',
+    'setTimeout','clearTimeout','setInterval','clearInterval','console'])
+    if(name in globalThis)ctx[name]=globalThis[name];
+  ctx._globalThis=ctx;
+  pluginContext=ctx;
   try {
-    for(const name of ['options','protected','lineBreaks','whitespace','punctuation','index','annotations'])
-      Services.scriptloader.loadSubScript(rootURI+'content/text/'+name+'.js',this);
-    Services.scriptloader.loadSubScript(rootURI+'content/textUI.js',this);
-  } catch (_) { Zotero.logError(new Error('引用文本整理未能载入，OCR 功能仍可使用。')); }
-  Repair = new PDFRepair({id,version,rootURI});
-  try {
-    Services.scriptloader.loadSubScript(rootURI+'content/updates.js',this);
-    Repair.updates = POCRUpdates.forZotero(Repair);
-  } catch (_) { Zotero.logError(new Error('检查更新模块未能载入，OCR 功能仍可使用。')); }
-  Zotero.PaddleOCRRepair = Repair;
-  await Repair.init();
+    Services.scriptloader.loadSubScript(rootURI+'content/scripts/paddleocrrepair.js',ctx);
+    // Zotero may await bootstrap startup before resolving its own readiness promises.
+    // Keep readiness inside the hook, but never make host startup wait for that hook.
+    pluginStartup=ctx.addon.hooks.onStartup();
+    pluginStartupCleanup=pluginStartup.catch(async error=>{
+      Zotero.logError(error);
+      if(pluginContext!==ctx)return;
+      try { await ctx.addon.hooks.onShutdown(); } catch(cleanupError) { Zotero.logError(cleanupError); } finally {
+        if(pluginContext===ctx){chromeHandle?.destruct();chromeHandle=null;pluginContext=null;}
+      }
+    });
+  } catch(error) {
+    try { await ctx.addon?.hooks.onShutdown(); } finally {
+      chromeHandle?.destruct();chromeHandle=null;pluginContext=null;
+    }
+    throw error;
+  }
 }
-function onMainWindowLoad({window}) { Repair?.addWindow(window); }
-function onMainWindowUnload({window}) { Repair?.removeWindow(window); }
+function onMainWindowLoad({window}) { return pluginContext?.addon.hooks.onMainWindowLoad(window); }
+function onMainWindowUnload({window}) { return pluginContext?.addon.hooks.onMainWindowUnload(window); }
 async function shutdown() {
-  await Repair?.shutdown();
-  delete Zotero.PaddleOCRRepair;
-  Repair = null;
-  chromeHandle?.destruct();
-  chromeHandle = null;
+  // Preserve the existing helper shutdown on both disable and application exit.
+  try { await pluginContext?.addon.hooks.onShutdown(); } finally {
+    pluginContext=null;chromeHandle?.destruct();chromeHandle=null;
+  }
 }
 function install() {}
 function uninstall() {}

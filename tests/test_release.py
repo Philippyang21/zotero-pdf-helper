@@ -22,11 +22,14 @@ class ReleaseTests(unittest.TestCase):
             root = Path(temporary)
             include = ['README.md', 'LICENSE', '.gitignore', '.gitattributes', 'plugin/content/updates.js',
                        'plugin/update-config.json', 'helper/repair/server.py', 'tests/test_updates.cjs',
-                       'release/update-manifest.json', 'scripts/distribution.py', 'docs/RELEASING.md']
+                       'release/update-manifest.json', 'scripts/distribution.py', 'docs/RELEASING.md',
+                       'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig.json',
+                       'zotero-plugin.config.ts', 'src/index.ts', 'typings/global.d.ts', 'docs/images/install.png']
             exclude = ['work/browser/Preferences', 'work/private.json', '.env', '.git/config',
                        '.venv/secret.py', 'helper/__pycache__/server.pyc', 'plugin/helper-source.zip',
                        'plugin/document.pdf', 'plugin/debug.log', 'plugin/zotero.sqlite',
-                       'plugin/key.pem', 'plugin/model.onnx', 'personal/data.json', 'unknown.py']
+                       'plugin/key.pem', 'plugin/model.onnx', 'personal/data.json', 'unknown.py',
+                       '.scaffold/build/addon/manifest.json', 'node_modules/third-party/index.js']
             for name in include + exclude:
                 file = root / name
                 file.parent.mkdir(parents=True, exist_ok=True)
@@ -56,12 +59,14 @@ class ReleaseTests(unittest.TestCase):
                 (root / name).mkdir(parents=True, exist_ok=True)
             manifest = {'version': '1.9.0', 'applications': {'zotero': {'strict_min_version': '10.0', 'strict_max_version': '10.0.*'}}}
             (root / 'plugin/manifest.json').write_text(json.dumps(manifest), encoding='utf8')
+            (root / 'package.json').write_text(json.dumps({'version': '1.9.0'}), encoding='utf8')
             (root / 'helper/repair/__init__.py').write_text("__version__ = '1.9.0'\n", encoding='utf8')
             feed_path = root / 'release/update-manifest.json'
             feed_path.write_text(json.dumps({'published': False}), encoding='utf8')
             with patch.object(module, 'ROOT', root), patch.object(sys, 'argv', ['set_version.py', '1.10.0']):
                 module.main()
             self.assertEqual(json.loads(feed_path.read_text())['latestVersion'], '1.10.0')
+            self.assertEqual(json.loads((root / 'package.json').read_text())['version'], '1.10.0')
             before = (root / 'plugin/manifest.json').read_bytes()
             with patch.object(module, 'ROOT', root), patch.object(sys, 'argv', ['set_version.py', '01.10.0']):
                 with self.assertRaises(SystemExit):

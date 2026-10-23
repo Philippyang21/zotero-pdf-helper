@@ -1,0 +1,10 @@
+packages:
+  - .
+
+# Keep pnpm's default guard; the lockfile pins the two upstream Git snapshots.
+blockExoticSubdeps: true
+
+# Same commits as the upstream template lockfile, fetched over HTTPS.
+overrides:
+  pdfjs-dist: https://codeload.github.com/zotero-plugin-dev/zotero-pdfjs-types/tar.gz/8aa68e6e7936550ee557d530b074bc861f22247a
+  epubjs: https://codeload.github.com/zotero/epub.js/tar.gz/a6139d586b66d404f3da2b846598960c0394afc5

@@ -29,7 +29,7 @@ var PDFRepair = class {
     this.receiptsPath = PathUtils.join(this.data,'attachments.json');
     this.receipts = await IOUtils.exists(this.receiptsPath) ? await IOUtils.readJSON(this.receiptsPath) : {};
     await Zotero.PreferencePanes.register({pluginID:this.id,id:'paddleocrrepair-preferences',
-      label:'PDF Helper',src:this.rootURI+'content/preferences.xhtml',
+      label:'PDF OCR Helper',src:this.rootURI+'content/preferences.xhtml',
       scripts:[this.rootURI+'content/preferences.js',this.rootURI+'content/textPreferences.js',this.rootURI+'content/updatePreferences.js']});
     for (const win of Zotero.getMainWindows()) this.addWindow(win);
     this.timer = setInterval(()=>this.tick().catch(()=>{}),2000);
@@ -59,11 +59,11 @@ var PDFRepair = class {
       try { await this.request('POST','/shutdown',{},1000); } catch (_) {}
     }
   }
-  alert(message,win=Zotero.getMainWindow()) { Services.prompt.alert(win,'PDF Helper',String(message)); }
+  alert(message,win=Zotero.getMainWindow()) { Services.prompt.alert(win,'PDF OCR Helper',String(message)); }
   confirm(message,win=Zotero.getMainWindow()) { return Services.prompt.confirm(win,'整理高亮文字',String(message)); }
   notify(message,delay=5000) {
     const progress = new Zotero.ProgressWindow();
-    progress.changeHeadline('PDF Helper');
+    progress.changeHeadline('PDF OCR Helper');
     progress.addDescription(message);
     progress.show();
     progress.startCloseTimer(delay);
@@ -92,14 +92,14 @@ var PDFRepair = class {
     menu('PaddleOCR 识别并替换为可检索 PDF',()=>this.submitSelected(win,'ocr'));
     menu('合并已有 MD/JSON，生成可检索 PDF',()=>this.submitSelected(win,'merge'));
     menu('识别版权页并补全文献条目',()=>this.copyrightSelected(win));
-    menu('查看 PDF Helper 任务状态',()=>this.openStatus(win));
+    menu('查看 PDF OCR Helper 任务状态',()=>this.openStatus(win));
     menu('恢复原始 PDF',()=>this.restoreSelected(win));
     const showing = ()=>{ for (const node of nodes) node.hidden=this.selected(win).length===0; };
     popup.addEventListener('popupshowing',showing);
     const tools = doc.getElementById('menu_ToolsPopup');
     let tool;
     if (tools) {
-      tool=doc.createXULElement('menuitem'); tool.setAttribute('label','PDF Helper：任务与设置');
+      tool=doc.createXULElement('menuitem'); tool.setAttribute('label','PDF OCR Helper：任务与设置');
       tool.addEventListener('command',()=>this.openStatus(win)); tools.appendChild(tool);
     }
     this.windows.set(win,{popup,showing,nodes,tool});
@@ -448,7 +448,7 @@ var PDFRepair = class {
     const json=await this.copyrightJSON(item,pdf,win,info.sha256);
     if (json===false) return;
     const result=await this.request('POST','/metadata/copyright',{pdf,json},120000);
-    if (!Services.prompt.confirm(win,'PDF Helper',this.copyrightPreview(result,parent))) return;
+    if (!Services.prompt.confirm(win,'PDF OCR Helper',this.copyrightPreview(result,parent))) return;
     const changed=this.applyCopyrightMetadata(parent,result.fields||{});
     if (!changed.applied.length) {
       this.alert('识别结果中的字段已有内容或不适用于当前条目，因此没有修改。',win); return;
@@ -474,7 +474,7 @@ var PDFRepair = class {
       const pair=await this.matching(item,pdf,win,mode==='merge',info.sha256);
       if (pair===false) continue;
       let selectedMode=pair ? 'merge' : mode;
-      if (selectedMode==='ocr' && !await this.token()) throw new Error('请先在 Zotero 设置 → PDF Helper 中保存 AI Studio Access Token');
+      if (selectedMode==='ocr' && !await this.token()) throw new Error('请先在 Zotero 设置 → PDF OCR Helper 中保存 AI Studio Access Token');
       this.notify((selectedMode==='ocr' ? '预计提交 OCR：' : '复用 MD/JSON，本次 OCR 页数为 0；PDF 共 ')+info.pages+' 页');
       // Yield before the submission request so the estimate is visible first.
       await Zotero.Promise.delay(150);
@@ -620,9 +620,17 @@ var PDFRepair = class {
     let reopen=readers.length>0;
     for (const reader of readers) {
       if (reader._flushState) await reader._flushState();
-      reader.close();
+      await reader.close();
     }
-    if (reopen) await Zotero.Promise.delay(400);
+    if (reopen) {
+      // Tab-close notifications remove Reader instances asynchronously in some hosts.
+      // A stale instance can make Reader.open select a tab that no longer exists.
+      for (let attempt=0;attempt<100;attempt++) {
+        if (!(Zotero.Reader._readers || []).some(reader=>reader.itemID===item.id)) return true;
+        await Zotero.Promise.delay(50);
+      }
+      throw new Error('PDF 阅读器尚未完成关闭，请稍后重试；尚未替换文件');
+    }
     return reopen;
   }
   async updateAttachment(item) {

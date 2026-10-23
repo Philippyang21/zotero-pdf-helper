@@ -1,5 +1,8 @@
 # 依赖与许可证
 
+- **Zotero Plugin Template**：基于 windingwind/zotero-plugin-template 提交 `306d4e2a0959a7b2f5e44bb38169fb25f841dbaf` 适配 TypeScript 入口、生命周期与构建配置；上游为 AGPL-3.0-or-later。项目原 LICENSE 保持不变。来源及改动见 [模板迁移记录](TEMPLATE-MIGRATION.md)。
+- **Zotero Plugin Toolkit 5.1.0-beta.13**：编译入口使用 BasicTool，所需代码打入 XPI；该版本为 MIT，完整声明随包保留在 [Toolkit 许可证](licenses/toolkit-MIT.txt)。没有启用 Toolkit 调试桥或模板演示功能。
+- **Zotero Plugin Scaffold 0.8.2、TypeScript 5.9.3、zotero-types 4.1.0-beta.4**：仅开发构建和类型检查使用，不随插件分发 node_modules、Node 或编译器。模板与开发类型依赖固定在锁文件中。
 - **Python 3.10+**：使用用户已安装的解释器，不随 XPI 分发 Python。
 - **PyMuPDF 1.26.7 / MuPDF**：本地 PDF 操作与结构验证；按项目所附 AGPL 条款或其单独商业授权使用。该固定版本在 PyPI 提供 macOS x86_64 与 arm64 wheel，要求 Python 3.10+。上游：[PyMuPDF](https://github.com/pymupdf/PyMuPDF)、[1.26.7 发布文件](https://pypi.org/project/PyMuPDF/1.26.7/#files)。
 - **Droid Sans Fallback**：使用 PyMuPDF 内置字体资源，保持其原有字体许可证；没有复制用户系统字体。

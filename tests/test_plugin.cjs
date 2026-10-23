@@ -127,3 +127,23 @@ test('macOS configured Python expands the user home directory',async()=>{
  const app=macPythonFixture({configured:'~/miniforge3/bin/python3',existing:['/Users/test/miniforge3/bin/python3']});
  assert.equal(await app.findPython(),'/Users/test/miniforge3/bin/python3');
 });
+
+test('PDF replacement waits for asynchronous Reader deregistration before reopening',async()=>{
+ const readers=[{itemID:42,_flushState:async()=>events.push('flush'),close:async()=>events.push('close')}],events=[];
+ const Zotero={Profile:{dir:'test-profile'},Reader:{_readers:readers},Promise:{delay:async ms=>{
+  events.push('wait');assert.equal(ms,50);Zotero.Reader._readers=[];
+ }}};
+ const ctx=vm.createContext({Zotero,PathUtils:{join:path.posix.join},setInterval,clearInterval});
+ vm.runInContext(fs.readFileSync(path.join(root,'plugin/repair.js'),'utf8'),ctx);
+ const app=vm.runInContext('new PDFRepair({})',ctx);
+ assert.equal(await app.closeReaders({id:42}),true);
+ assert.deepEqual(events,['flush','close','wait']);assert.equal(Zotero.Reader._readers.length,0);
+});
+
+test('a Reader that never closes stops PDF replacement instead of reusing a stale tab',async()=>{
+ const Zotero={Profile:{dir:'test-profile'},Reader:{_readers:[{itemID:42,close:()=>{}}]},Promise:{delay:async()=>{}}};
+ const ctx=vm.createContext({Zotero,PathUtils:{join:path.posix.join},setInterval,clearInterval});
+ vm.runInContext(fs.readFileSync(path.join(root,'plugin/repair.js'),'utf8'),ctx);
+ const app=vm.runInContext('new PDFRepair({})',ctx);
+ await assert.rejects(app.closeReaders({id:42}),/尚未完成关闭/);
+});

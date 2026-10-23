@@ -14,7 +14,7 @@ const job={id:'example-only',state:'recognizing',mode:'ocr',target:'example-libr
 let html=fs.readFileSync(path.join(root,'plugin/content/status.xhtml'),'utf8')
  .replace(/<\?[^>]*\?>/g,'').replace(/<window[^>]*>/,'<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"></head><body>')
  .replace(/<\/window>/,'</body></html>').replace(/(<\/?)(?:html:)/g,'$1')
- .replace(/<script src="[^"]*"\s*\/>/g,'').replace('<h1>PDF Helper</h1>','<h1>PDF Helper · 0.1.7 示例预览</h1>');
+ .replace(/<script src="[^"]*"\s*\/>/g,'').replace('<h1>PDF OCR Helper</h1>','<h1>PDF OCR Helper · 0.1.7 示例预览</h1>');
 const init=`window.arguments=[{repair:{state:${JSON.stringify({jobs:[job],usage:{},dailyThreshold:20000})},finalizePhase:new Map(),finalizeErrors:new Map(),receipts:{},busyMessage:'',ensure:async()=>{},tick:async()=>{}}}];`;
 const scripts=init+'\n'+fs.readFileSync(path.join(root,'plugin/content/progress.js'),'utf8')+'\n'+fs.readFileSync(path.join(root,'plugin/content/status.js'),'utf8');
 html=html.replace('</body>',`<script>${scripts}</script></body>`);

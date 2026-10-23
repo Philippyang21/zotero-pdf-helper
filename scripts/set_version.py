@@ -14,6 +14,7 @@ def main():
     if not re.fullmatch(r'(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)', args.version):
         parser.error('Use a stable X.Y.Z version, without v or leading zeros')
     manifest_path = ROOT / 'plugin/manifest.json'
+    package_path = ROOT / 'package.json'
     helper_path = ROOT / 'helper/repair/__init__.py'
     feed_path = ROOT / 'release/update-manifest.json'
     manifest = json.loads(manifest_path.read_text(encoding='utf8'))
@@ -27,6 +28,10 @@ def main():
     manifest['version'] = feed['latestVersion'] = args.version
     feed['minZoteroVersion'] = manifest['applications']['zotero']['strict_min_version']
     feed['maxZoteroVersion'] = manifest['applications']['zotero']['strict_max_version']
+    if package_path.exists():
+        package = json.loads(package_path.read_text(encoding='utf8'))
+        package['version'] = args.version
+        package_path.write_text(json.dumps(package, ensure_ascii=False, indent=2) + '\n', encoding='utf8')
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf8')
     helper_path.write_text(replacement, encoding='utf8')
     feed_path.write_text(json.dumps(feed, ensure_ascii=False, indent=2) + '\n', encoding='utf8')

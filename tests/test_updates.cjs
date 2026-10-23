@@ -152,14 +152,15 @@ test('runtime adapter loads only local config on click and uses installed versio
  assert.equal(result.currentVersion,app.version);assert.equal(await client.openCommunity(result),false);assert.equal(launched.length,0);
  answer=true;assert.equal(await client.openCommunity(result),true);assert.deepEqual(launched,[config.communityUrl]);
 });
-test('bootstrap isolates a broken update module from original OCR initialization',async()=>{
- let initialized=0;const context=vm.createContext({
-  Zotero:{logError:()=>{}},Services:{io:{newURI:()=>({})},scriptloader:{loadSubScript:uri=>{if(uri.endsWith('updates.js'))throw Error('broken');}}},
-  Cc:{'@mozilla.org/addons/addon-manager-startup;1':{getService:()=>({registerChrome:()=>({})})}},Ci:{},
-  PDFRepair:class {async init(){initialized++;}}
- });
- vm.runInContext(fs.readFileSync(path.join(__dirname,'../plugin/bootstrap.js'),'utf8'),context);
- await context.startup({id:addonId,version:'0.1.11',rootURI:'fixture:///'});assert.equal(initialized,1);assert.ok(context.Zotero.PaddleOCRRepair);
+test('template runtime isolates a broken update module from original OCR initialization',async()=>{
+ let initialized=0;const context=vm.createContext({rootURI:'fixture:///',
+  Zotero:{logError:()=>{},initializationPromise:Promise.resolve(),unlockPromise:Promise.resolve(),uiReadyPromise:Promise.resolve()},
+  Services:{scriptloader:{loadSubScript:uri=>{if(uri.endsWith('updates.js'))throw Error('broken');}}},
+  PDFRepair:class {async init(){initialized++;} async shutdown(){}}
+ });context._globalThis=context;
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../.scaffold/build/addon/content/scripts/paddleocrrepair.js'),'utf8'),context);
+ await context.addon.hooks.onStartup();assert.equal(initialized,1);assert.ok(context.Zotero.PaddleOCRRepair);
+ await context.addon.hooks.onShutdown();
 });
 test('bootstrap subscript without DOM globals reuses host URL and UTF-8 constructors',async()=>{
  const hostWindow={URL,TextEncoder};

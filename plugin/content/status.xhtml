@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
-<window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" xmlns:html="http://www.w3.org/1999/xhtml" title="PDF Helper — 任务进度">
+<window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" xmlns:html="http://www.w3.org/1999/xhtml" title="PDF OCR Helper — 任务进度">
  <html:style>
   #app {font:14px system-ui,sans-serif;color:#183247;background:#f3f6f9;padding:24px;overflow:auto;height:100%;box-sizing:border-box;}
   h1 {font-size:24px;margin:0;} h2 {font-size:19px;margin:0 0 8px;} p {line-height:1.65;margin:8px 0;}
@@ -25,7 +25,7 @@
   #segment-panel th {width:auto;} #segment-panel tr {cursor:default;}
  </html:style>
  <html:main id="app">
-  <html:h1>PDF Helper</html:h1>
+  <html:h1>PDF OCR Helper</html:h1>
   <html:p id="summary" aria-live="polite">正在连接本地处理服务…</html:p>
   <html:div id="busy" hidden="hidden"><html:span id="busy-text"></html:span><html:progress aria-label="准备任务" /></html:div>
   <html:div><html:button id="settings">设置</html:button><html:button id="refresh">刷新</html:button><html:button id="resume">恢复 / 重试</html:button><html:button id="cancel">取消</html:button><html:button id="apply">重试保存与替换</html:button><html:button id="open">打开生成的 PDF</html:button></html:div>

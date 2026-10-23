@@ -1,0 +1,37 @@
+{
+  "name": "zotero-pdf-helper",
+  "version": "0.1.13",
+  "private": true,
+  "description": "为 PDF 添加文字层、补全版权页书目信息，并在本地整理高亮引用文字。",
+  "config": {
+    "addonName": "PDF OCR Helper",
+    "addonID": "paddleocr-pdf-repair@local.tools",
+    "addonRef": "paddleocrrepair",
+    "addonInstance": "PDFHelperAddon",
+    "prefsPrefix": "extensions.paddleocrrepair"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Philippyang21/zotero-pdf-helper.git"
+  },
+  "author": "PDF Repair contributors",
+  "license": "AGPL-3.0",
+  "homepage": "https://github.com/Philippyang21/zotero-pdf-helper#readme",
+  "bugs": { "url": "https://github.com/Philippyang21/zotero-pdf-helper/issues" },
+  "scripts": {
+    "build": "node scripts/build-template.cjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/test_plugin.cjs tests/test_text.cjs tests/test_text_ui.cjs tests/test_text_annotations.cjs tests/test_updates.cjs tests/test_template.cjs",
+    "check:release": "node scripts/check-release.cjs"
+  },
+  "dependencies": {
+    "zotero-plugin-toolkit": "5.1.0-beta.13"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.0",
+    "typescript": "5.9.3",
+    "zotero-plugin-scaffold": "0.8.2",
+    "zotero-types": "4.1.0-beta.4"
+  },
+  "packageManager": "pnpm@11.25.0"
+}

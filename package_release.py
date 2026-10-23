@@ -26,26 +26,24 @@ with zipfile.ZipFile(source,'w',zipfile.ZIP_DEFLATED) as archive:
         archive.write(file,(Path(ROOT.name)/relative).as_posix())
 bundle=output/f'{stem}-完整包'
 bundle.mkdir(exist_ok=True)
+bundle_files=[]
 for path in (xpi,source):
     shutil.copyfile(path,bundle/path.name)
-for src,name in [('docs/USAGE.md','Windows与macOS安装使用说明.md'),
-                 (f'docs/CHANGELOG-{version}.md',f'{version}更新说明.md'),
-                 ('docs/BRANDING-REPORT.md','名称与设置调整说明.md'),
-                 ('docs/UPDATE-REPORT.md','检查更新开发与测试报告.md'),
-                 ('docs/RELEASING.md','发布前配置与操作说明.md'),
-                 ('docs/COMMUNITY-SUBMISSION.md','中文社区收录材料.md')]:
-    shutil.copyfile(ROOT/src,bundle/name)
-preview=ROOT/'work'/'settings-account-1250-light.png'
-if preview.is_file():
-    shutil.copyfile(preview,bundle/'设置面板预览.png')
-hashes={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(bundle.iterdir())
-        if p.is_file() and p.name!='SHA256.json'}
+    bundle_files.append(bundle/path.name)
+# Keep README/docs layout so all relative illustration and guide links work after extraction.
+for file in [ROOT/'README.md',ROOT/'CHANGELOG.md',ROOT/'LICENSE',
+             *(p for p in source_files(ROOT) if p.relative_to(ROOT).parts[0]=='docs')]:
+    destination=bundle/file.relative_to(ROOT)
+    destination.parent.mkdir(parents=True,exist_ok=True)
+    shutil.copyfile(file,destination)
+    bundle_files.append(destination)
+hashes={p.relative_to(bundle).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(bundle_files)}
 (bundle/'SHA256.json').write_text(json.dumps(hashes,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
+bundle_files.append(bundle/'SHA256.json')
 bundle_zip=output/f'{stem}-完整包.zip'
 with zipfile.ZipFile(bundle_zip,'w',zipfile.ZIP_DEFLATED) as archive:
-    for file in sorted(bundle.iterdir()):
-        if file.is_file():
-            archive.write(file,(Path(bundle.name)/file.name).as_posix())
+    for file in sorted(bundle_files):
+        archive.write(file,(Path(bundle.name)/file.relative_to(bundle)).as_posix())
 
 # Check the distributed bytes, including the helper nested inside the XPI.
 import io
@@ -76,6 +74,10 @@ with zipfile.ZipFile(source) as archive:
     assert not any(any(p in {'work','__pycache__','.git'} for p in Path(n).parts) for n in archive.namelist())
 with zipfile.ZipFile(bundle_zip) as archive:
     assert archive.testzip() is None
+    for name,digest in hashes.items():
+        assert hashlib.sha256(archive.read(bundle.name+'/'+name)).hexdigest()==digest,name
+    for image in (ROOT/'docs/images').glob('*.png'):
+        assert archive.read(bundle.name+'/docs/images/'+image.name)==image.read_bytes()
 print(json.dumps({'version':version,'files':[
     dict(path=str(p),bytes=p.stat().st_size,sha256=hashlib.sha256(p.read_bytes()).hexdigest())
     for p in (xpi,source,bundle_zip)],'verified':True},ensure_ascii=False))

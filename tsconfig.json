@@ -1,0 +1,6 @@
+{
+  "extends": "zotero-types/entries/sandbox/",
+  "compilerOptions": { "composite": false, "noEmit": true },
+  "include": ["src", "typings"],
+  "exclude": ["node_modules", "work", ".scaffold", "plugin"]
+}
