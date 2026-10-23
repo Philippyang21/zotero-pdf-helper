@@ -1,6 +1,6 @@
 # 本地构建与发布前准备
 
-截至 2026-10-23，当前版本 0.1.13 的源码已推送至 GitHub main 分支，尚未创建 tag 或 Release。包含 build.py 的这一层已是 Git 仓库根目录；后续继续使用该仓库，不要重复初始化，也不要把工作区的历史版本、outputs/ 或浏览器资料一起上传。
+截至 2026-10-24，当前版本 0.1.13 的模板、兼容适配及教程等源码已推送至 GitHub main 分支，正在定稿首发说明与资产，尚未创建 tag 或 Release。包含 build.py 的这一层已是 Git 仓库根目录；后续继续使用该仓库，不要重复初始化，也不要把工作区的历史版本、outputs/ 或浏览器资料一起上传。
 
 ## 需要确认的配置
 
@@ -67,7 +67,7 @@ GitHub 首发前运行普通模式 `node scripts/check-release.cjs`，并完成�
 1. 确认正式版本；需要改号时运行 `python scripts/set_version.py X.Y.Z`，再更新 CHANGELOG、对应 docs/CHANGELOG-X.Y.Z.md 及清单说明。脚本不处理已发布清单，避免意外改写生产源。归档已发布数据后再开始下一候选。
 2. `Philippyang21/zotero-pdf-helper` 已完成首次提交和 main 推送，继续使用现有仓库。人工在项目根目录检查 `git status --short` 和 `git diff`，只按目录/文件逐项暂存并审查后续修改，不对工作区执行 `git add .`。
 3. 审查分发文件清单与原图标授权。保留 LICENSE、THIRD_PARTY 和对应源码；运行依赖由原有流程安装，不能把 python-env、第三方 wheel、模型或 Zotero 数据库打包。源码测试中的引用片段仅是现有规则回归样本，公开前由维护者复核其使用范围。
-4. 本地全部验证后，由维护者提交并推送必要修改，确认远端内容与构建源码一致，再创建 Release。当前计划 tag 为 `v0.1.13`，标题为 `PDF OCR Helper 0.1.13`，附同版本 .xpi、源码 ZIP、校验和和准确更新说明。发布说明须明确社区尚未收录、手动检查更新尚未启用。
+4. 本地全部验证后，由维护者提交并推送必要修改，确认远端内容与构建源码一致，再创建 Release。当前计划 tag 为 `v0.1.13`，标题为 `PDF OCR Helper 0.1.13`，附同版本 .xpi、源码 ZIP、完整 ZIP、校验和和准确更新说明。发布前同步 README 的版本徽章和下载说明，再重建并核验最终包；发布说明须明确社区尚未收录、手动检查更新尚未启用。发布后由维护者将 B 站教程改为公开，再核对匿名播放。
 5. 按 [社区材料](COMMUNITY-SUBMISSION.md) 人工请求收录。初次进入社区前允许先完成 XPI 的分发准备，但不能启用候选清单。等待审核和网站展示，确认该插件的实际详情页和镜像下载正确。
 6. 取得真实社区详情页后，将 `https://github.com/Philippyang21/zotero-pdf-helper`、`https://raw.githubusercontent.com/Philippyang21/zotero-pdf-helper/main/release/update-manifest.json` 和真实 communityUrl 一次性写入集中配置，清单的 communityUrl 同步；以高于已公开版本的新版本重新构建并验证。已分发的无配置版本需要用户手动覆盖安装这个已配置构建；它不能凭空获得后来添加的源。
 7. 正式 .xpi 和社区页面可获得后，将经过审查的公开清单设置 published=true，再由维护者部署到固定地址。运行 --ready，并实际核查匿名 HTTPS 获取、相同版本、下一测试版本、系统浏览器取消/确认和真实安装。以后每次稳定发布只在新版已可下载且兼容声明真实时更新清单；保持详情 URL 稳定，避免旧安装被引导到别的插件。

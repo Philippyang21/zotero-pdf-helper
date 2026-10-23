@@ -3,7 +3,7 @@
 [![Zotero](https://img.shields.io/badge/Zotero-7%20%7C%208%20%7C%209%20%7C%2010.0.x-cc2936?style=flat-square&logo=zotero&logoColor=white)](https://www.zotero.org/)
 [![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-square&logo=github)](https://github.com/windingwind/zotero-plugin-template)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue?style=flat-square)](LICENSE)
-[![Candidate](https://img.shields.io/badge/candidate-0.1.13-orange?style=flat-square)](https://github.com/Philippyang21/zotero-pdf-helper/releases)
+[![Version](https://img.shields.io/badge/version-0.1.13-blue?style=flat-square)](https://github.com/Philippyang21/zotero-pdf-helper/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/Philippyang21/zotero-pdf-helper?style=flat-square)](https://github.com/Philippyang21/zotero-pdf-helper/stargazers)
 [![GitHub Downloads](https://img.shields.io/github/downloads/Philippyang21/zotero-pdf-helper/total?style=flat-square)](https://github.com/Philippyang21/zotero-pdf-helper/releases)
 
@@ -14,7 +14,7 @@
 PDF OCR Helper依托paddleocr，为 Zotero 中的图片型 PDF 添加可搜索、可复制的文字层。能够整理高亮摘录的注释文字，包括中英文标点转换、删除多余空格等，并从书籍版权页补充文献条目信息。
 ![PDF OCR Helper 的三条功能路径：可搜索 PDF、引用文字整理和版权页信息补全](docs/images/workflow.png)
 
-> **发布进度**：0.1.13 正在准备首次 GitHub Release；发布后在 [Releases](https://github.com/Philippyang21/zotero-pdf-helper/releases) 提供 XPI 下载。中文社区收录及手动检查更新尚未启用。
+> **下载与更新**：安装包见 [Releases](https://github.com/Philippyang21/zotero-pdf-helper/releases)。中文社区收录及插件内的手动检查更新尚未启用，后续版本请从 Releases 手动下载。
 
 ## 目录
 
@@ -53,11 +53,11 @@ PDF OCR Helper依托paddleocr，为 Zotero 中的图片型 PDF 添加可搜索�
 
 ### 1. 下载并安装插件
 
-首个 Release 发布后，在 [Releases 页面](https://github.com/Philippyang21/zotero-pdf-helper/releases) 的 **Assets** 中下载 `pdf-helper-0.1.13.xpi`。
+在 [Releases 页面](https://github.com/Philippyang21/zotero-pdf-helper/releases) 的 **Assets** 中下载 `pdf-helper-0.1.13.xpi`。
 
 在 Zotero 中打开 **工具 → 插件 → 齿轮 → 从文件安装插件…**，选择 XPI，按提示安装并重启。Windows 与 macOS 使用同一个安装包。旧版用户直接覆盖安装，插件 ID、已有设置、令牌和任务路径继续沿用。
 
-当前候选支持 **Zotero 7、8、9 与 10.0.x**。已在 Windows x64 的 **7.0.32、8.0.4、9.0.6、10.0.6** 上完成分版本原生验证；具体范围见 [兼容性说明](docs/COMPATIBILITY.md)。
+本版本支持 **Zotero 7、8、9 与 10.0.x**。已在 Windows x64 的 **7.0.32、8.0.4、9.0.6、10.0.6** 上完成分版本原生验证；具体范围见 [兼容性说明](docs/COMPATIBILITY.md)。
 
 ### 2. 按需要准备环境
 

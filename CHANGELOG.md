@@ -1,6 +1,8 @@
 # 更新日志
 
-## 0.1.13 — 2026-10-22（本地候选，未发布）
+## 0.1.13
+
+首个公开版本。安装与使用说明见 [README](README.md)。
 
 - 显示名称更新为 PDF OCR Helper，覆盖插件管理器、设置入口、菜单、任务窗口和通知；沿用原插件 ID 与已有配置。
 - 2026-10-23：迁入 Zotero Plugin Template 的 TypeScript 入口、生命周期和 Scaffold 构建流程，保留原插件 ID、设置与任务路径；重做图文 README。

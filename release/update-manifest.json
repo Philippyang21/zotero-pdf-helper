@@ -5,6 +5,6 @@
   "latestVersion": "0.1.13",
   "minZoteroVersion": "7.0",
   "maxZoteroVersion": "10.0.*",
-  "releaseNotes": "PDF OCR Helper 0.1.13 未发布候选：修正图标圆外透明背景，接入 Zotero Plugin Template，并补充图文功能及安装说明。新增 Zotero 7、8、9 支持，保留 10.0.x；已在 Windows x64 的 7.0.32、8.0.4、9.0.6、10.0.6 完成原生核心流程及完整重启验证，macOS 待实测。修正启动与阅读器关闭顺序，保留原插件 ID、设置与任务路径。GitHub 仓库已建立，本次修改尚未推送或发布。三项客户端更新 URL 仍为空，手动检查更新尚未启用。",
+  "releaseNotes": "PDF OCR Helper 0.1.13 首发说明：为扫描 PDF 添加可搜索文字层，支持合并已有 MD/JSON、备份恢复、版权页信息补全，以及本机高亮和复制文字整理。接入 Zotero Plugin Template，补充图文安装及视频教程入口。支持 Zotero 7、8、9 与 10.0.x；已在 Windows x64 的 7.0.32、8.0.4、9.0.6、10.0.6 完成原生核心流程及完整重启验证，macOS 待实测。修正启动与阅读器关闭顺序，保留原插件 ID、设置与任务路径。GitHub Releases 提供手动下载入口；三项客户端更新 URL 仍为空，中文社区收录及手动检查更新尚未启用，本清单保持未启用状态。",
   "communityUrl": null
 }

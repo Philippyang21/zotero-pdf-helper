@@ -1,6 +1,6 @@
 # Zotero 中文社区收录材料（待人工确认与提交）
 
-核实日期：2026-10-23。基础源码已推送至 GitHub 仓库，本次模板、兼容适配和文档修改尚未提交或推送；尚未发布 GitHub Release，未发出社区收录 Issue、PR 或正式申请。正式投稿前需再次复核下述社区流程。
+社区流程核实日期：2026-10-23。发布准备进度：2026-10-24。模板、兼容适配及教程等源码已推送至 GitHub，当前进行首发说明与资产定稿；GitHub Release 尚待维护者创建，未发出社区收录 Issue、PR 或正式申请。正式投稿前需再次复核下述社区流程。
 
 ## 核实到的实际流程
 
@@ -34,15 +34,15 @@
 
 **适用环境**：manifest 声明 Zotero 7.0–10.0.*；Windows x64 已实测 7.0.32、8.0.4、9.0.6、10.0.6。macOS Intel/Apple Silicon 为实现目标，原生验收尚未完成。PDF 处理需已安装 64 位 Python 3.10+，原流程建立独立依赖环境；仅文本整理和检查更新不需 Python。不能宣传为整个插件免 Python、离线 OCR、支持所有 Zotero 版本或已在 macOS 实测。
 
-**安装**：从该插件真实社区详情页下载正式 .xpi，在 Zotero 工具 → 插件中从文件安装。首次运行 PDF 处理按 [USAGE](USAGE.md) 配置 Python；新云端识别需用户自己的 AI Studio Token。云端识别涉及上传 PDF，纯文本整理和更新检查不上传文献。Token 不放入源码和安装包。
+**安装**：首发从本项目 GitHub Releases 下载 .xpi，在 Zotero 工具 → 插件中从文件安装；社区收录后再使用真实详情页下载入口。首次运行 PDF 处理按 [USAGE](USAGE.md) 配置 Python；新云端识别需用户自己的 AI Studio Token。云端识别涉及上传 PDF，纯文本整理和更新检查不上传文献。Token 不放入源码和安装包。
 
 **升级**：完成当前任务并保留恢复备份；从相同详情页下载适合所用 Zotero 版本的新版 .xpi，覆盖安装并按提示重启。检查更新不会自动下载、覆盖插件目录或执行安装。
 
-**版本日志**：候选 0.1.13 及 [CHANGELOG](../CHANGELOG.md)；正式版本与发布时间待确认。
+**版本日志**：首发版本 0.1.13，见 [CHANGELOG](../CHANGELOG.md)；实际发布时间以 GitHub Release 为准。
 
 **GitHub 源码**：[https://github.com/Philippyang21/zotero-pdf-helper](https://github.com/Philippyang21/zotero-pdf-helper)。
 
-**.xpi 下载**：目前只有本地 0.1.13 候选包。正式 GitHub Release、社区镜像及详情页尚未建立，不能提供虚构链接。
+**.xpi 下载**：[本项目 Releases](https://github.com/Philippyang21/zotero-pdf-helper/releases)。向社区提交前须确认 v0.1.13 已公开且能下载同版 XPI；社区镜像和详情页尚未建立。
 
 **许可证**：既有 AGPL-3.0，保持不变；依赖见 [THIRD_PARTY](THIRD_PARTY.md)。
 

@@ -24,7 +24,7 @@ fs.writeFileSync(path.join(dir,'workflow.html'),page('PDF OCR Helper，让 PDF �
 <section class="card"><span class="n">02 / 整洁的引用</span><h2>整理高亮摘录与复制文字</h2><p>处理误换行、多余空格和标点。新高亮可自动保存，也能手动整理选中项。</p><div class="flow">原始摘录 → 本地规则 → 引用文字</div><p class="small">普通可选字 PDF 也能用；文字整理不消耗 OCR 额度。</p></section>
 <section class="card"><span class="n">03 / 书目信息</span><h2>从版权页补全条目</h2><p>读取前 40 页中的版权页，展示识别结果，经确认后补充父条目的空字段。</p><div class="flow">版权页 → 核对候选 → 补充空字段</div><p class="small">已有标题、作者等字段保留，写入前由你确认。</p></section>`, '功能流程示意 · 云端 OCR 需要上传 PDF；文字整理与 PDF 合成在本机完成。'));
 fs.writeFileSync(path.join(dir,'installation.html'),page('安装 PDF OCR Helper','Windows 与 macOS 使用同一个 XPI 安装包。',`
-<section class="card"><span class="n">STEP 01</span><h2>下载 XPI</h2><p>首个 Release 发布后，打开项目 Releases 页面，在 Assets 中下载：</p><div class="flow">pdf-helper-0.1.13.xpi</div><p class="small">Source code 是开发源码；安装插件请选择 .xpi 文件。</p></section>
+<section class="card"><span class="n">STEP 01</span><h2>下载 XPI</h2><p>打开项目 Releases 页面，在 Assets 中下载：</p><div class="flow">pdf-helper-0.1.13.xpi</div><p class="small">Source code 是开发源码；安装插件请选择 .xpi 文件。</p></section>
 <section class="card"><span class="n">STEP 02</span><h2>从文件安装插件</h2><p>在 Zotero 中依次打开：</p><div class="flow">工具 → 插件 → 齿轮<br>→ 从文件安装插件…</div><p class="small">选择下载的 XPI，按提示安装并重启。升级时覆盖安装。</p></section>
 <section class="card"><span class="n">STEP 03</span><h2>按功能完成设置</h2><p>打开 Zotero 设置中的 PDF OCR Helper，选择要使用的功能。</p><div class="flow">文字整理：选择规则并保存<br>PDF 处理：准备 Python 3.10+</div><p class="small">新云端识别还需填写 AI Studio Access Token。</p></section>`, '安装操作示意 · 支持 Zotero 7 / 8 / 9 / 10.0.x；Windows x64 已完成分版本验证，macOS 待实测。'));
 console.log(dir);
