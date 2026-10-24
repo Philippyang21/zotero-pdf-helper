@@ -40,7 +40,7 @@ for file in [ROOT/'README.md',ROOT/'CHANGELOG.md',ROOT/'LICENSE',
 hashes={p.relative_to(bundle).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(bundle_files)}
 (bundle/'SHA256.json').write_text(json.dumps(hashes,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
 bundle_files.append(bundle/'SHA256.json')
-bundle_zip=output/f'{stem}-完整包.zip'
+bundle_zip=output/f'{stem}-bundle.zip'
 with zipfile.ZipFile(bundle_zip,'w',zipfile.ZIP_DEFLATED) as archive:
     for file in sorted(bundle_files):
         archive.write(file,(Path(bundle.name)/file.relative_to(bundle)).as_posix())

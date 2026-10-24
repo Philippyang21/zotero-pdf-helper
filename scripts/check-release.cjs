@@ -17,17 +17,16 @@ assert.equal(meta.update_url,'https://paddleocr-pdf-repair.invalid/updates.json'
 assert.ok(read('CHANGELOG.md').includes('## '+manifest.version));
 assert.ok(fs.existsSync(path.join(root,'docs/CHANGELOG-'+manifest.version+'.md')));
 const pending=[];
-for(const field of ['repositoryUrl','manifestUrl','communityUrl'])if(!config[field])pending.push(field);
-if(!feed.published)pending.push('published=false (candidate only)');
-if(!feed.communityUrl)pending.push('feed.communityUrl');
-if(!pending.length){
+for(const field of ['repositoryUrl','latestReleaseUrl'])if(!config[field])pending.push(field);
+if(config.repositoryUrl && config.latestReleaseUrl){
  const checked=U.validateConfig(config);
  // Exact build range has already been checked against the installed manifest above.
- U.validateManifest(feed,checked,meta.id,()=>0);
+ U.validateManifest(feed,checked,meta.id,()=>0,{allowUnpublished:true});
 } else {
  // Null URLs intentionally represent missing configuration; reject partially filled unsafe values.
- if(config.repositoryUrl || config.manifestUrl || config.communityUrl)U.validateConfig(config);
+ if(config.repositoryUrl || config.latestReleaseUrl)U.validateConfig(config);
  assert.equal(feed.published,false,'Incomplete configuration must stay unpublished');
 }
-console.log(JSON.stringify({version:manifest.version,zotero:meta,ready:pending.length===0,pending},null,2));
+console.log(JSON.stringify({version:manifest.version,zotero:meta,ready:pending.length===0,
+ source:'GitHub latest HEAD + tag manifest + XPI HEAD',legacyFeedUsed:false,pending},null,2));
 if(process.argv.includes('--ready') && pending.length){console.error('Release is not configured; see docs/RELEASING.md.');process.exitCode=1;}

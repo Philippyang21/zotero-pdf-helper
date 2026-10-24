@@ -1,10 +1,8 @@
 {
-  "schemaVersion": 1,
-  "repositoryUrl": null,
-  "manifestUrl": null,
-  "communityUrl": null,
-  "allowedManifestHosts": ["raw.githubusercontent.com"],
-  "allowedCommunityHosts": ["zotero-chinese.com"],
+  "schemaVersion": 4,
+  "repositoryUrl": "https://github.com/Philippyang21/zotero-pdf-helper",
+  "latestReleaseUrl": "https://github.com/Philippyang21/zotero-pdf-helper/releases/latest",
+  "assetNamePrefix": "pdf-helper",
   "timeoutMs": 10000,
   "maxResponseBytes": 65536
 }

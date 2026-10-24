@@ -11,7 +11,9 @@ function pocrBindUpdatePrefs() {
   el('pocr-update-version').textContent=app.version ? '当前安装版本：v'+app.version : '无法获取当前安装版本。';
   const error=e=>{
     result=null;download.hidden=true;el('pocr-update-details').hidden=true;
-    status.textContent=e?.code==='not-configured' ? '检查更新尚未配置。请等待发布者提供更新信息源和中文社区详情页。' :
+    status.textContent=e?.code==='not-configured' ? '检查更新尚未配置。请等待发布者提供 GitHub 更新信息源。' :
+      e?.code==='rate-limit' ? 'GitHub 暂时限制了访问，请稍后重试。' :
+      ['release-missing','release-url','release-metadata','manifest','prerelease'].includes(e?.code) ? 'GitHub 版本信息暂不完整，请稍后重试。' :
       '暂时无法获取更新信息，请检查网络后重试。';
     check.textContent='重试';
   };
@@ -23,7 +25,9 @@ function pocrBindUpdatePrefs() {
       if(!app.updates)throw new Error('unavailable');
       const next=await app.updates.check();if(disposed)return;result=next;
       check.textContent='检查更新';
-      if(next.state==='current'){status.textContent='当前已是最新版本。';return;}
+      if(next.state==='current'){
+        status.textContent=next.isAhead ? '当前安装版本高于 GitHub 最新正式版 v'+next.latestVersion+'，无需更新。' : '当前已是最新版本。';return;
+      }
       status.textContent=next.state==='available' ? '发现新版本 v'+next.latestVersion+'。' :
         '当前新版本可能不支持你的 Zotero 版本，请先查看版本要求。';
       el('pocr-update-details').hidden=false;
@@ -39,8 +43,8 @@ function pocrBindUpdatePrefs() {
     if(!result || busy || disposed)return;
     busy=true;download.disabled=true;check.disabled=true;
     try {
-      const opened=await app.updates.openCommunity(result);
-      if(!disposed)status.textContent=opened ? '已打开中文社区详情页。下载 .xpi 后，请在 Zotero 插件管理器中手动安装。' : '已取消，仍留在设置界面。';
+      const opened=await app.updates.openRelease(result);
+      if(!disposed)status.textContent=opened ? '已打开 GitHub 版本发布页。在 Assets 中下载 .xpi 后，请在 Zotero 插件管理器中手动安装。' : '已取消，仍留在设置界面。';
     } catch(e) { if(!disposed)error(e); }
     finally { busy=false;if(!disposed){download.disabled=false;check.disabled=false;} }
   });

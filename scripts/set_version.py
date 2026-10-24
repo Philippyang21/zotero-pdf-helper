@@ -25,6 +25,9 @@ def main():
         parser.error('Cannot uniquely locate helper version; no files changed')
     if feed.get('published'):
         parser.error('Archive the published feed before starting a new candidate; no files changed')
+    if 'releaseUrl' in feed:
+        config = json.loads((ROOT / 'plugin/update-config.json').read_text(encoding='utf8'))
+        feed['releaseUrl'] = config['repositoryUrl'] + '/releases/tag/v' + args.version
     manifest['version'] = feed['latestVersion'] = args.version
     feed['minZoteroVersion'] = manifest['applications']['zotero']['strict_min_version']
     feed['maxZoteroVersion'] = manifest['applications']['zotero']['strict_max_version']

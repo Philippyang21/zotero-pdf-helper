@@ -62,10 +62,12 @@ class ReleaseTests(unittest.TestCase):
             (root / 'package.json').write_text(json.dumps({'version': '1.9.0'}), encoding='utf8')
             (root / 'helper/repair/__init__.py').write_text("__version__ = '1.9.0'\n", encoding='utf8')
             feed_path = root / 'release/update-manifest.json'
-            feed_path.write_text(json.dumps({'published': False}), encoding='utf8')
+            (root / 'plugin/update-config.json').write_text(json.dumps({'repositoryUrl': 'https://github.com/test-owner/test-plugin'}), encoding='utf8')
+            feed_path.write_text(json.dumps({'published': False, 'releaseUrl': 'https://github.com/test-owner/test-plugin/releases/tag/v1.9.0'}), encoding='utf8')
             with patch.object(module, 'ROOT', root), patch.object(sys, 'argv', ['set_version.py', '1.10.0']):
                 module.main()
             self.assertEqual(json.loads(feed_path.read_text())['latestVersion'], '1.10.0')
+            self.assertEqual(json.loads(feed_path.read_text())['releaseUrl'], 'https://github.com/test-owner/test-plugin/releases/tag/v1.10.0')
             self.assertEqual(json.loads((root / 'package.json').read_text())['version'], '1.10.0')
             before = (root / 'plugin/manifest.json').read_bytes()
             with patch.object(module, 'ROOT', root), patch.object(sys, 'argv', ['set_version.py', '01.10.0']):

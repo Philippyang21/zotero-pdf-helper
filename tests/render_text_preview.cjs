@@ -42,13 +42,13 @@ async function newHighlight(id,text='中国 文学, "史料"如此.'){
 }
 `;
 const checks=`
-const updateConfig={schemaVersion:1,repositoryUrl:'https://github.com/test-owner/test-plugin',manifestUrl:'https://raw.githubusercontent.com/test-owner/test-plugin/main/release/update-manifest.json',communityUrl:'https://zotero-chinese.com/user-guide/plugins/test-plugin',allowedManifestHosts:['raw.githubusercontent.com'],allowedCommunityHosts:['zotero-chinese.com'],timeoutMs:10000,maxResponseBytes:65536};
+const updateConfig={schemaVersion:4,repositoryUrl:'https://github.com/test-owner/test-plugin',latestReleaseUrl:'https://github.com/test-owner/test-plugin/releases/latest',assetNamePrefix:'pdf-helper',timeoutMs:10000,maxResponseBytes:65536};
 let updateConfigValue=updateConfig,updateRequests=0,updateFailure=false,updateAnswer=false;
 const updateOpened=[],updatePrompts=[];
-const updateFeed={schemaVersion:1,published:true,addonId:'fixture-only',latestVersion:'0.1.11',minZoteroVersion:'10.0',maxZoteroVersion:'10.0.*',releaseNotes:'离线示例：手动检查更新。',communityUrl:updateConfig.communityUrl};
+const updateFeed={schemaVersion:2,published:true,addonId:'fixture-only',latestVersion:'0.1.11',minZoteroVersion:'10.0',maxZoteroVersion:'10.0.*',releaseNotes:'离线示例：手动检查更新。',releaseUrl:updateConfig.repositoryUrl+'/releases/tag/v0.1.11'};
 const updateCompare=(a,b)=>{a=a.split('.');b=b.split('.');for(let i=0;i<Math.max(a.length,b.length);i++){const x=a[i]==='*'?Infinity:Number(a[i]||0),y=b[i]==='*'?Infinity:Number(b[i]||0);if(x!==y)return x<y?-1:1;}return 0;};
 app.version='0.1.11';
-const updateClient=POCRUpdates.createClient({addonId:app.id,currentVersion:()=>app.version,zoteroVersion:()=> '10.0.6',compareZotero:updateCompare,loadConfig:async()=>updateConfigValue,request:async()=>{updateRequests++;if(updateFailure)throw new Error('offline fixture');return {...updateFeed};},confirm:result=>{updatePrompts.push(result);return updateAnswer;},openURL:url=>updateOpened.push(url)});
+const updateClient=POCRUpdates.createClient({addonId:app.id,currentVersion:()=>app.version,zoteroVersion:()=> '10.0.6',compareZotero:updateCompare,loadConfig:async()=>updateConfigValue,request:async()=>{updateRequests++;if(updateFailure){const error=new Error('offline fixture');if(typeof updateFailure==='string')error.code=updateFailure;throw error;}return {...updateFeed};},confirm:result=>{updatePrompts.push(result);return updateAnswer;},openURL:url=>updateOpened.push(url)});
 app.updates=updateClient;
 const tools=new AcademicTextUI(app);app.textTools=tools;Zotero.PaddleOCRRepair=app;tools.init();
 const results=[],assert=(ok,message)=>{if(!ok)throw new Error(message);};
@@ -178,23 +178,27 @@ window.addEventListener('load',async()=>{
  await run('explicit check shows checking then current with no browser launch',async()=>{
   el('pocr-update-check').click();assert(el('pocr-update-check').disabled&&el('pocr-update-status').textContent.includes('正在检查'),'busy state');await tick();
   assert(updateRequests===1&&el('pocr-update-status').textContent==='当前已是最新版本。','current');assert(el('pocr-update-download').hidden&&updateOpened.length===0,'no navigation');
+   app.version='0.1.13';el('pocr-update-check').click();await tick();
+   assert(el('pocr-update-status').textContent.includes('高于 GitHub 最新正式版 v0.1.11'),'candidate ahead of published release');
+   assert(el('pocr-update-download').hidden,'no downgrade');app.version='0.1.11';
  });
  await run('new version displays notes as plain text and compatible requirements',async()=>{
-  updateFeed.latestVersion='0.1.12';updateFeed.releaseNotes='<img src=x onerror=alert(1)> 更新说明';el('pocr-update-check').click();await tick();
+  updateFeed.latestVersion='0.1.12';updateFeed.releaseUrl=updateConfig.repositoryUrl+'/releases/tag/v0.1.12';updateFeed.releaseNotes='<img src=x onerror=alert(1)> 更新说明';el('pocr-update-check').click();await tick();
   assert(el('pocr-update-status').textContent==='发现新版本 v0.1.12。','available');assert(!el('pocr-update-download').hidden,'download action');
   assert(el('pocr-update-notes').textContent===updateFeed.releaseNotes&&!el('pocr-update-notes').querySelector('img'),'no remote markup');
   assert(el('pocr-update-requirements').textContent.includes('10.0.*'),'range');
  });
- await run('cancel stays in settings; acceptance opens only the pinned community detail',async()=>{
+ await run('cancel stays in settings; acceptance opens only the matching GitHub release',async()=>{
   const originalEnsured=ensured,originalRequests=requests,originalSaves=saveCount;
   el('pocr-update-download').click();await tick();assert(updateOpened.length===0&&el('pocr-update-status').textContent.includes('已取消'),'cancel');
   assert(!el('pocr-page-updates').hidden,'stays here');updateAnswer=true;el('pocr-update-download').click();await tick();
-  assert(updateOpened.length===1&&updateOpened[0]===updateConfig.communityUrl,'community only');
+  assert(updateOpened.length===1&&updateOpened[0]===updateFeed.releaseUrl,'matching release only');
+  assert(el('pocr-update-download').textContent==='前往 GitHub 下载'&&el('pocr-update-status').textContent.includes('GitHub 版本发布页'),'GitHub wording');
   assert(ensured===originalEnsured&&requests===originalRequests&&saveCount===originalSaves,'no OCR or annotation operation');
  });
  await run('failed recheck hides stale download and offers user retry',async()=>{
   updateFailure=true;el('pocr-update-check').click();await tick();assert(el('pocr-update-status').textContent.includes('暂时无法'),'failure');
-  assert(el('pocr-update-download').hidden&&!el('pocr-update-check').disabled&&el('pocr-update-check').textContent==='重试','retry');updateFailure=false;
+  assert(el('pocr-update-download').hidden&&!el('pocr-update-check').disabled&&el('pocr-update-check').textContent==='重试','retry');updateFailure='rate-limit';el('pocr-update-check').click();await tick();assert(el('pocr-update-status').textContent.includes('限制'),'explicit access restriction');updateFailure=false;
  });
  await run('incompatible release shows warning and no recommended download',async()=>{
   updateFeed.minZoteroVersion='11.0';updateFeed.maxZoteroVersion='11.*';el('pocr-update-check').click();await tick();
@@ -202,7 +206,7 @@ window.addEventListener('load',async()=>{
   updateFeed.minZoteroVersion='10.0';updateFeed.maxZoteroVersion='10.0.*';
  });
  await run('missing deployment configuration is explicit and makes no request',async()=>{
-  const count=updateRequests;updateConfigValue={...updateConfig,communityUrl:null};el('pocr-update-check').click();await tick();
+  const count=updateRequests;updateConfigValue={...updateConfig,latestReleaseUrl:null};el('pocr-update-check').click();await tick();
   assert(updateRequests===count&&el('pocr-update-status').textContent.includes('尚未配置'),'not configured');assert(el('pocr-update-download').hidden,'no link');updateConfigValue=updateConfig;
  });
  await run('unavailable update module does not break other settings',async()=>{

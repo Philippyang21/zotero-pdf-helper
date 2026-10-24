@@ -1,6 +1,6 @@
 {
   "name": "zotero-pdf-helper",
-  "version": "0.1.13",
+  "version": "0.1.16",
   "private": true,
   "description": "为 PDF 添加文字层、补全版权页书目信息，并在本地整理高亮引用文字。",
   "config": {
@@ -17,7 +17,9 @@
   "author": "PDF Repair contributors",
   "license": "AGPL-3.0",
   "homepage": "https://github.com/Philippyang21/zotero-pdf-helper#readme",
-  "bugs": { "url": "https://github.com/Philippyang21/zotero-pdf-helper/issues" },
+  "bugs": {
+    "url": "https://github.com/Philippyang21/zotero-pdf-helper/issues"
+  },
   "scripts": {
     "build": "node scripts/build-template.cjs",
     "typecheck": "tsc --noEmit",

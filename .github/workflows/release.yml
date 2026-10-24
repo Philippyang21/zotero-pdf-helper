@@ -1,0 +1,112 @@
+name: Publish reviewed release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag (vX.Y.Z)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          run_install: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Verify reviewed tag and version
+        run: |
+          node <<'JS'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const tag = process.env.RELEASE_TAG;
+          assert.match(tag, /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
+          assert.equal(tag, 'v' + require('./package.json').version);
+          assert.ok(fs.existsSync(`release/notes-${tag}.md`));
+          JS
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm build
+      - run: pnpm test
+      - run: python -m unittest discover -s tests -p test_release.py -v
+      - run: node scripts/check-release.cjs --ready
+      - run: python package_release.py --out artifacts
+      - name: Write and verify checksums
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          version = json.loads(Path('package.json').read_text())['version']
+          folder = Path('artifacts')
+          names = [f'pdf-helper-{version}{suffix}' for suffix in ['.xpi', '-source.zip', '-bundle.zip']]
+          lines = [hashlib.sha256((folder / name).read_bytes()).hexdigest() + '  ' + name + '\n' for name in names]
+          (folder / 'SHA256SUMS.txt').write_text(''.join(lines), encoding='ascii')
+          for line in (folder / 'SHA256SUMS.txt').read_text().splitlines():
+              digest, name = line.split('  ')
+              assert hashlib.sha256((folder / name).read_bytes()).hexdigest() == digest
+          PY
+      - name: Upload complete draft, then publish
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const crypto = require('node:crypto');
+            const assert = require('node:assert/strict');
+            const {execFileSync} = require('node:child_process');
+            const tag = process.env.RELEASE_TAG;
+            const version = require(process.cwd() + '/package.json').version;
+            assert.equal(tag, 'v' + version);
+            const names = ['.xpi', '-source.zip', '-bundle.zip'].map(suffix => `pdf-helper-${version}${suffix}`).concat('SHA256SUMS.txt');
+            assert.deepEqual(fs.readdirSync('artifacts', {withFileTypes:true}).filter(entry => entry.isFile()).map(entry => entry.name).sort(), [...names].sort());
+            let body = fs.readFileSync(`release/notes-${tag}.md`, 'utf8');
+            body += '\n\n| File | Bytes | SHA-256 |\n| --- | ---: | --- |\n';
+            for (const name of names) {
+              const data = fs.readFileSync(`artifacts/${name}`);
+              body += `| ${name} | ${data.length} | ${crypto.createHash('sha256').update(data).digest('hex')} |\n`;
+            }
+            const {owner, repo} = context.repo;
+            let release;
+            try { release = (await github.rest.repos.getReleaseByTag({owner, repo, tag})).data; }
+            catch (error) { if (error.status !== 404) throw error; }
+            if (release && !release.draft) throw new Error('Refusing to modify an already published release');
+            if (!release) {
+              release = (await github.rest.repos.createRelease({owner, repo, tag_name:tag,
+                target_commitish:execFileSync('git', ['rev-parse','HEAD'], {encoding:'utf8'}).trim(),
+                name:`PDF OCR Helper ${version}`, body, draft:true, prerelease:false})).data;
+            }
+            for (const name of names) {
+              const existing = release.assets.find(asset => asset.name === name);
+              if (existing) await github.rest.repos.deleteReleaseAsset({owner, repo, asset_id:existing.id});
+              await github.rest.repos.uploadReleaseAsset({owner, repo, release_id:release.id,
+                name, data:fs.readFileSync(`artifacts/${name}`)});
+            }
+            const uploaded = (await github.rest.repos.listReleaseAssets({owner, repo, release_id:release.id})).data;
+            assert.deepEqual(uploaded.map(asset => asset.name).sort(), [...names].sort());
+            assert.ok(uploaded.every(asset => asset.state === 'uploaded' && asset.size > 0));
+            const published = (await github.rest.repos.updateRelease({owner, repo, release_id:release.id,
+              name:`PDF OCR Helper ${version}`, body, draft:false, prerelease:false, make_latest:'true'})).data;
+            core.notice(`Published ${published.html_url}`);

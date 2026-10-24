@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "PDF OCR Helper",
-  "version": "0.1.13",
+  "version": "0.1.16",
   "description": "为 PDF 添加文字层、确认补全版权页书目信息，并在本地整理高亮引用文字。",
   "author": "PDF Repair contributors",
   "icons": {
