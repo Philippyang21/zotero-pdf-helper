@@ -30,6 +30,16 @@
        <html:p class="pocr-callout pocr-caution">这会实际修改新注释的摘录，不保留修改前的副本。关闭后只停止后续整理，不还原已保存内容，也不批量改写旧注释。注释可按 Zotero 设置同步；PDF 和 OCR 原文件保持不变。</html:p>
        <html:p class="pocr-help">已有高亮也可以处理：在阅读器侧边栏选中一条或多条高亮，右键选择“整理并保存选中高亮文字…”，确认后只保存这些选中项。可以关闭自动整理、保留手动处理；引用文本整理总开关仍需开启。</html:p>
       </html:div>
+      <html:div id="markdown-sync-settings" class="pocr-card">
+       <html:h3>Markdown 高亮同步</html:h3>
+       <html:p>将 PDF 中的高亮、下划线和批注同步到对应 MD，供本地大模型和其他阅读工具读取。</html:p>
+       <html:label class="pocr-field" for="markdown-sync-pdf"><html:span>PDF 附件</html:span><html:select id="markdown-sync-pdf"></html:select></html:label>
+       <html:p class="pocr-help">先在文库中选中 PDF，或打开 PDF 阅读器，再点“刷新 PDF 列表”。已开启同步的 PDF 也会列在这里。</html:p>
+       <html:label class="pocr-field" for="markdown-sync-md"><html:span>对应的 Markdown 附件</html:span><html:select id="markdown-sync-md"></html:select></html:label>
+       <html:div class="pocr-actions"><html:button type="button" id="markdown-sync-refresh">刷新 PDF 列表</html:button><html:button type="button" id="markdown-sync-enable" class="pocr-primary">开启自动同步</html:button><html:button type="button" id="markdown-sync-now">立即同步</html:button><html:button type="button" id="markdown-sync-stop">停止自动同步</html:button></html:div>
+       <html:p id="markdown-sync-status" class="pocr-callout" role="status" aria-live="polite">正在读取同步设置…</html:p>
+       <html:p class="pocr-help">本区操作确认后立即生效，不需要点击下方保存按钮，也不受“引用文本整理”开关影响。PDF 与 MD 需位于同一文献条目下；首次修改前备份原 MD，停止同步后保留现有标记。</html:p>
+      </html:div>
       <html:div class="pocr-card">
        <html:h3>整理方式</html:h3><html:label class="pocr-field" for="text-preset"><html:span>先选一套常用规则</html:span><html:select id="text-preset"><html:option value="paper">论文引用（推荐）</html:option><html:option value="light">轻度整理</html:option><html:option value="custom">自定义</html:option></html:select></html:label><html:p id="text-preset-description" class="pocr-help"></html:p>
        <html:label class="pocr-field" for="text-punctuation"><html:span>标点格式</html:span><html:select id="text-punctuation"><html:option value="smart">自动判断（推荐）</html:option><html:option value="chinese">统一为中文标点</html:option><html:option value="english">统一为英文标点</html:option><html:option value="preserve">保持原文</html:option></html:select></html:label><html:p id="text-punctuation-description" class="pocr-help"></html:p>

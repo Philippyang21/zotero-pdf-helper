@@ -1,6 +1,6 @@
 {
   "name": "zotero-pdf-helper",
-  "version": "0.1.16",
+  "version": "0.1.18",
   "private": true,
   "description": "为 PDF 添加文字层、补全版权页书目信息，并在本地整理高亮引用文字。",
   "config": {
@@ -23,7 +23,7 @@
   "scripts": {
     "build": "node scripts/build-template.cjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/test_plugin.cjs tests/test_text.cjs tests/test_text_ui.cjs tests/test_text_annotations.cjs tests/test_updates.cjs tests/test_template.cjs",
+    "test": "node --test tests/test_plugin.cjs tests/test_text.cjs tests/test_text_ui.cjs tests/test_text_annotations.cjs tests/test_updates.cjs tests/test_template.cjs tests/test_markdown_highlights.cjs tests/test_markdown_preferences.cjs",
     "check:release": "node scripts/check-release.cjs"
   },
   "dependencies": {

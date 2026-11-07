@@ -222,6 +222,6 @@ window.addEventListener('load',async()=>{
  el('qa-status').textContent=results.filter(r=>r.passed).length+'/'+results.length+' 项离线界面/模拟保存检查通过（非原生 Zotero 实测）';document.documentElement.dataset.qaComplete='true';
 });
 `;
-const scripts=modules+'\n'+source('updates.js')+'\n'+setup+'\n'+fs.readFileSync(path.join(root,'plugin/prefs.js'),'utf8')+'\n'+source('textUI.js')+'\n'+checks+'\n'+source('preferences.js')+'\n'+source('textPreferences.js')+'\n'+source('updatePreferences.js');
+const scripts=modules+'\n'+source('updates.js')+'\n'+setup+'\n'+fs.readFileSync(path.join(root,'plugin/prefs.js'),'utf8')+'\n'+source('textUI.js')+'\n'+checks+'\n'+source('preferences.js')+'\n'+source('textPreferences.js')+'\n'+source('markdownPreferences.js')+'\n'+source('updatePreferences.js');
 const html='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>0.1.10 设置·离线验证</title><style>html{color-scheme:light dark}body{font:14px/1.6 system-ui;margin:24px;background:Canvas;color:CanvasText}#qa-status{font-size:12px;color:GrayText}#qa-result{white-space:pre-wrap;font-size:11px}</style><script>if(new URL(location.href).searchParams.has("light"))document.documentElement.style.colorScheme="light";</script></head><body><p id="qa-status">正在验证示例界面…</p>'+markup+'<div id="native-example" hidden></div><pre id="qa-result" hidden></pre><script>'+scripts.replace(/<\/script/gi,'<\\/script')+'</script></body></html>';
 fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,html);console.log(output);

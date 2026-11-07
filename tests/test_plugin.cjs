@@ -33,13 +33,14 @@ function fixture(){
   Utilities:{Internal:{md5Async:async file=>{if(!files.has(file))throw new Error('missing file');return crypto.createHash('md5').update(files.get(file)).digest('hex');}}},
   Prefs:{get:()=> 'archive'},Attachments:{},
   ItemFields:{getID:name=>name,isValidForType:(name,type)=>type===2&&['title','volume','numberOfVolumes','edition','date','publisher','place'].includes(name)},
-  CreatorTypes:{getID:name=>name==='author'?1:0}};
+  CreatorTypes:{getID:name=>({author:1,editor:3,translator:4})[name]||0}};
  async function importFile({file,parentItemID,libraryID,title}){const i=new Item('attachment');i.parentID=parentItemID;i.libraryID=libraryID;i.attachmentFilename=path.win32.basename(file);i.file=file;i.title=title;await i.save();return i;}
  Zotero.Attachments.importFromFile=importFile;Zotero.Attachments.linkFromFile=async opts=>{const i=await importFile(opts);i.linked=true;return i;};
- const ctx=vm.createContext({Zotero,PathUtils:{join:path.win32.join,filename:path.win32.basename,parent:path.win32.dirname},IOUtils:{exists:async p=>files.has(p),makeDirectory:async()=>{},copy:async(a,b)=>files.set(b,files.get(a)),writeJSON:async()=>{}},setInterval,clearInterval});
+ const ctx=vm.createContext({Zotero,PathUtils:{join:path.win32.join,filename:path.win32.basename,parent:path.win32.dirname},IOUtils:{exists:async p=>files.has(p),readUTF8:async p=>files.get(p),makeDirectory:async()=>{},copy:async(a,b)=>files.set(b,files.get(a)),writeJSON:async()=>{}},setInterval,clearInterval});
+ vm.runInContext(fs.readFileSync(path.join(root,'plugin/content/markdownHighlights.js'),'utf8'),ctx);
  vm.runInContext(fs.readFileSync(path.join(root,'plugin/repair.js'),'utf8'),ctx);
  const app=vm.runInContext('new PDFRepair({})',ctx);app.receipts={};app.receiptsPath='C:\\data\\receipts.json';app.notify=()=>{};
- return {app,items,files,collections,parent,pdf,md,json,other,job};
+ return {app,items,files,collections,parent,pdf,md,json,other,job,markdown:ctx.PDFHelperMarkdown};
 }
 test('archive reparents exact stored files, preserves PDF and unrelated files, and recovers without receipt',async()=>{
  const f=fixture();await f.app.ensureSidecars(f.job,f.pdf,'archive');
@@ -66,12 +67,27 @@ test('archive does not move hash mismatches or linked files',async()=>{
  const f=fixture();f.files.set(f.md.file,'different');await f.app.ensureSidecars(f.job,f.pdf,'archive');assert.equal(f.md.parentID,1);
  const g=fixture();g.md.linked=true;await assert.rejects(()=>g.app.ensureSidecars(g.job,g.pdf,'archive'),/链接附件/);assert.equal(g.md.parentID,1);
 });
+
+test('managed MD highlights do not duplicate OCR sidecars and require stopping sync before archiving',async()=>{
+ const f=fixture();f.app.markdownSync={bindings:{'1:KEY2':{mdKey:'KEY3'}}};
+ f.files.set(f.md.file,f.markdown.render('markdown',[{text:'markdown',key:'ANN00001'}],'KEY2').text);
+ await f.app.ensureSidecars(f.job,f.pdf,'import');assert.equal(f.items.size,5);assert.equal(f.app.receipts[f.job.id].md,3);
+ await assert.rejects(()=>f.app.ensureSidecars(f.job,f.pdf,'archive'),/先停止同步/);
+});
 test('copyright metadata fills only blank supported fields and preserves existing authors',()=>{
  const f=fixture();f.parent.setField('title','已有标题');f.parent.setCreators([{firstName:'',lastName:'原作者',fieldMode:1,creatorTypeID:1}]);
  const changed=f.app.applyCopyrightMetadata(f.parent,{title:'识别标题',authors:['新作者'],volume:'第三卷',numberOfVolumes:'4',edition:'第2版',date:'2020',publisher:'学术出版社',place:'上海'});
  assert.equal(f.parent.getField('title'),'已有标题');assert.equal(f.parent.getField('volume'),'第三卷');
  assert.equal(f.parent.getField('publisher'),'学术出版社');assert.deepEqual(f.parent.getCreators().map(v=>v.lastName),['原作者']);
  assert.ok(changed.applied.includes('卷次'));assert.ok(changed.skipped.includes('标题（已有内容）'));assert.ok(changed.skipped.includes('作者（已有内容）'));
+});
+
+test('copyright creators preserve printed order and distinct roles, including translators when authors already exist',()=>{
+ const f=fixture();f.app.applyCopyrightMetadata(f.parent,{authors:['王五','张三','李四'],editors:['赵六'],translators:['周八','吴九']});
+ assert.deepEqual(Array.from(f.parent.getCreators(),c=>[c.lastName,c.creatorTypeID]),[['王五',1],['张三',1],['李四',1],['赵六',3],['周八',4],['吴九',4]]);
+ const g=fixture();g.parent.setCreators([{lastName:'原作者',creatorTypeID:1,fieldMode:1}]);
+ g.app.applyCopyrightMetadata(g.parent,{authors:['另一作者'],translators:['译者甲','译者乙']});
+ assert.deepEqual(Array.from(g.parent.getCreators(),c=>[c.lastName,c.creatorTypeID]),[['原作者',1],['译者甲',4],['译者乙',4]]);
 });
 test('phase counts do not claim completion before final acknowledgement',()=>{
  const ctx=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(root,'plugin/content/progress.js'),'utf8'),ctx);const view=vm.runInContext('RepairProgress.view',ctx);

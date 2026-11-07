@@ -10,6 +10,7 @@ declare global {
     addon: Addon;
     PDFRepair: new (options: { id: string; version: string; rootURI: string }) => LegacyRepair;
     POCRUpdates?: { forZotero(repair: LegacyRepair): unknown };
+    PDFHelperMarkdownSync: new (repair: LegacyRepair) => unknown;
     [key: string]: unknown;
   };
 }

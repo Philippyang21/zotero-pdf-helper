@@ -28,9 +28,11 @@ var PDFRepair = class {
     await IOUtils.makeDirectory(this.data,{ignoreExisting:true});
     this.receiptsPath = PathUtils.join(this.data,'attachments.json');
     this.receipts = await IOUtils.exists(this.receiptsPath) ? await IOUtils.readJSON(this.receiptsPath) : {};
+    try { await this.markdownSync?.init(); }
+    catch (_) { Zotero.logError(new Error('Markdown 高亮同步未能初始化，请检查同步设置文件。')); }
     await Zotero.PreferencePanes.register({pluginID:this.id,id:'paddleocrrepair-preferences',
       label:'PDF OCR Helper',src:this.rootURI+'content/preferences.xhtml',
-      scripts:[this.rootURI+'content/preferences.js',this.rootURI+'content/textPreferences.js',this.rootURI+'content/updatePreferences.js']});
+      scripts:[this.rootURI+'content/preferences.js',this.rootURI+'content/textPreferences.js',this.rootURI+'content/markdownPreferences.js',this.rootURI+'content/updatePreferences.js']});
     for (const win of Zotero.getMainWindows()) this.addWindow(win);
     this.timer = setInterval(()=>this.tick().catch(()=>{}),2000);
     // Restore journaled work after a Zotero restart, even if the helper was stopped.
@@ -50,6 +52,7 @@ var PDFRepair = class {
     }
   }
   async shutdown() {
+    try { await this.markdownSync?.close(); } catch (_) { Zotero.logError(new Error('Markdown 高亮同步关闭时遇到问题。')); }
     try { this.updates?.dispose(); } catch (_) {}
     try { await this.textTools?.shutdown(); } catch (_) { Zotero.logError(new Error('引用文本整理关闭时遇到问题。')); }
     clearInterval(this.timer);
@@ -402,15 +405,17 @@ var PDFRepair = class {
       if (String(parent.getField(name)||'').trim()) { skipped.push(label+'（已有内容）'); continue; }
       parent.setField(name,value); applied.push(label);
     }
-    const names=Array.isArray(fields.authors) ? fields.authors.map(v=>String(v||'').trim()).filter(Boolean) : [];
-    if (names.length) {
-      const authorTypeID=Zotero.CreatorTypes.getID('author');
+    for (const [field,role,label] of [['authors','author','作者'],['editors','editor','编者'],['translators','translator','译者']]) {
+      const names=Array.isArray(fields[field]) ? [...new Set(fields[field].map(v=>String(v||'').trim()).filter(Boolean))] : [];
+      if (!names.length) continue;
+      const creatorTypeID=Zotero.CreatorTypes.getID(role);
       const creators=parent.getCreators();
-      if (!authorTypeID) skipped.push('作者（条目类型不支持）');
-      else if (creators.some(creator=>creator.creatorTypeID===authorTypeID)) skipped.push('作者（已有内容）');
+      if (!creatorTypeID || (Zotero.CreatorTypes.isValidForItemType && !Zotero.CreatorTypes.isValidForItemType(creatorTypeID,parent.itemTypeID))) skipped.push(label+'（条目类型不支持）');
+      else if (creators.some(creator=>creator.creatorTypeID===creatorTypeID)) skipped.push(label+'（已有内容）');
       else {
-        parent.setCreators([...creators,...names.map(lastName=>({firstName:'',lastName,fieldMode:1,creatorTypeID:authorTypeID}))]);
-        applied.push('作者');
+        // Preserve the printed order and full name; no speculative surname split.
+        parent.setCreators([...creators,...names.map(lastName=>({firstName:'',lastName,fieldMode:1,creatorTypeID}))]);
+        applied.push(label);
       }
     }
     return {applied,skipped};
@@ -418,6 +423,7 @@ var PDFRepair = class {
   copyrightPreview(result,parent) {
     const fields=result.fields||{};
     const rows=[['标题',fields.title],['作者',(fields.authors||[]).join('、')],
+      ['编者',(fields.editors||[]).join('、')],['译者',(fields.translators||[]).join('、')],
       ['卷次',fields.volume],['总卷数',fields.numberOfVolumes],['版次',fields.edition],
       ['出版年',fields.date],['出版社',fields.publisher],['地点',fields.place]]
       .filter(([,value])=>String(value||'').trim()).map(([label,value])=>label+'：'+value);
@@ -425,9 +431,10 @@ var PDFRepair = class {
     for (const [name,label] of [['title','标题'],['volume','卷次'],['numberOfVolumes','总卷数'],
       ['edition','版次'],['date','出版年'],['publisher','出版社'],['place','地点']])
       if (String(parent.getField(name)||'').trim()) existing.push(label);
-    const authorTypeID=Zotero.CreatorTypes.getID('author');
-    if (parent.getCreators().some(creator=>creator.creatorTypeID===authorTypeID)) existing.push('作者');
+    for (const [role,label] of [['author','作者'],['editor','编者'],['translator','译者']])
+      if (parent.getCreators().some(creator=>creator.creatorTypeID===Zotero.CreatorTypes.getID(role))) existing.push(label);
     return '疑似版权页：PDF 第 '+result.pageNumber+' 页（来源：'+result.source+'）\n\n'+rows.join('\n')+
+      (result.additionalPages?.length ? '\n补充核对：PDF 第 '+result.additionalPages.join('、')+' 页' : '')+
       '\n\n确认后只填写空字段，不覆盖已有内容。'+
       (existing.length ? '\n当前已有并将保留：'+existing.join('、') : '')+'\n\n是否写入父文献条目？';
   }
@@ -550,6 +557,8 @@ var PDFRepair = class {
   }
   async _ensureSidecars(job,item,mode) {
     if (!['archive','hidden','import','link'].includes(mode)) throw new Error('识别结果保存方式无效');
+    const markdownBinding=this.markdownSync?.bindings[item.libraryID+':'+item.key];
+    if(markdownBinding && mode==='archive')throw new Error('此 PDF 已开启 Markdown 高亮同步。请先停止同步，再将 MD/JSON 移到独立存档；也可以继续放在原文献下');
     const receipt=this.receipts[job.id] ||= {};
     if (!await IOUtils.exists(job.md) || !await IOUtils.exists(job.json)) throw new Error('任务结果尚未就绪或已被移除');
     if (mode==='hidden') {
@@ -570,7 +579,12 @@ var PDFRepair = class {
             ![parent.id,original.id,otherArchive?.id].includes(existing.parentID)) continue;
         const path=await existing.getFilePathAsync();
         if (!path || !await IOUtils.exists(path) || !new RegExp('\\.'+type+'$','i').test(path)) continue;
-        if (await Zotero.Utilities.Internal.md5Async(path)===hash) { found=existing; break; }
+        let matches=await Zotero.Utilities.Internal.md5Async(path)===hash;
+        if(!matches&&type==='md'&&markdownBinding?.mdKey===existing.key&&typeof PDFHelperMarkdown!=='undefined'){
+          // Managed highlight markup must not create duplicate OCR attachments.
+          matches=PDFHelperMarkdown.strip(await IOUtils.readUTF8(path),item.key)===await IOUtils.readUTF8(job.md);
+        }
+        if (matches) { found=existing; break; }
       }
       if (found && mode!=='link' && found.isLinkedFileAttachment())
         throw new Error('现有 MD/JSON 是链接附件；请先在 Zotero 中转为存储附件，才能收纳并同步文件。原文件未删除');

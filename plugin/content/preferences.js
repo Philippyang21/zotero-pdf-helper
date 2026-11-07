@@ -66,6 +66,7 @@ function pocrBindPrefs(){
     el('pocr-message').textContent='派生缓存已清理。任务记录、识别资料和恢复备份保留。';
   }));
   root.addEventListener('input',event=>{
+    if(event.target.closest('#markdown-sync-settings'))return;
     if(event.target.id.startsWith('text-preview-'))return;
     const group=event.target.closest('[data-settings-group]');if(!group)return;
     el(group.dataset.settingsGroup==='text'?'text-settings-message':'pocr-message').textContent='有尚未保存的修改；切换页面不会丢失，请在下方保存。';

@@ -6,6 +6,7 @@ export interface LegacyRepair {
   addWindow(window: _ZoteroTypes.MainWindow): void;
   removeWindow(window: _ZoteroTypes.MainWindow): void;
   updates?: unknown;
+  markdownSync?: unknown;
 }
 
 export function createRepairRuntime(): LegacyRepair {
@@ -19,6 +20,12 @@ export function createRepairRuntime(): LegacyRepair {
     Zotero.logError(new Error("引用文本整理未能载入，OCR 功能仍可使用。"));
   }
   const repair = new _globalThis.PDFRepair({ id: config.addonID, version, rootURI });
+  try {
+    load("content/markdownHighlights.js");
+    repair.markdownSync = new _globalThis.PDFHelperMarkdownSync(repair);
+  } catch {
+    Zotero.logError(new Error("Markdown 高亮同步模块未能载入。"));
+  }
   try {
     load("content/updates.js");
     repair.updates = _globalThis.POCRUpdates?.forZotero(repair);

@@ -1,20 +1,25 @@
-# Zotero 中文社区收录材料
+# Zotero 中文社区收录与版本同步
 
-核实日期：2026-10-24。PDF OCR Helper 0.1.13 已正式发布并完成公开附件下载核验；社区申请按维护者要求后置。0.1.16已接入真实GitHub正式版查询和对应版本发布页，检查更新与社区收录独立。
+核实日期：2026-11-07（北京时间）。[收录申请 #331](https://github.com/zotero-chinese/zotero-plugins/issues/331) 已于11月5日由社区维护者关闭并标记完成。本插件已进入社区源清单及发布目录，分类为附件管理、阅读器增强、条目元数据。
 
-## 当前流程
+## 版本同步
 
-[商店“请求收录插件”](https://zotero-chinese.com/plugins/) 指向 [zotero-chinese/zotero-plugins](https://github.com/zotero-chinese/zotero-plugins)。[官方中文说明](https://github.com/zotero-chinese/zotero-plugins/blob/main/README-zh.md) 已恢复接收新插件，要求仓库地址、用途和发布／下载地址。网页当前限制非协作者创建 PR，优先提交 Issue。
+[社区官方说明](https://github.com/zotero-chinese/zotero-plugins/blob/main/README-zh.md)规定，采集器检查最新正式版，一般无需为每次版本发布手动更新清单；仓库迁移、分类、下载地址或历史兼容范围变化时才需要补充信息。
 
-网站仍从外部 scraper 获取插件目录，正式入口采集器处于 shadow 过渡阶段。Issue、审核合并、采集与实际商店展示分别验收；提交时请维护者确认是否需同步 syt2/zotero-addons-scraper，避免重复申请。
+本插件在 `src/plugins.ts` 中已配置 `discoverReleases: true` 和 `publishInShadow: true`。即使外部 scraper 尚未收录，社区也会从本插件正式 XPI 读取版本与兼容范围，写入发布数据。网站当前从本社区 gh-pages 分支的 `dist/plugins.json` 获取目录；数据发布后触发网站重新构建。
 
-社区提交按维护者最新安排后置。申请草稿仅保存在本机工作目录，未提交，也不随插件分发；后续恢复时重新核对正式版本与下载链接。推荐分类 attachment、reader。
+本次0.1.18发布沿用仓库、插件ID、下载文件命名及7.0–10.0.*兼容范围，无需重复申请。发布后应核对社区目录中的版本、目标Zotero版本与GitHub XPI地址；不能将GitHub发布成功等同于网站已刷新。
 
-## 提交与核验
+## 本次更新内容
 
-1. 提交前检索仓库地址，避免重复 Issue；只用已登录网页或明确获准的认证途径提交。
-2. 提交后回读 Issue，保存链接、编号与时间；提交成功不代表审核或收录完成。
-3. 审核后检查实际商店展示、版本、兼容范围与 XPI 下载校验和。需要新增源清单时按维护者指引操作。
-4. 社区永久详情页仅作为商店资料保存；手动更新下载按钮使用 GitHub 版本发布页，不等待社区详情链接，也不把目录弹窗虚构为永久链接。
+- 优化文献版权页信息识读精度。
+- 新增 PDF 高亮与 Markdown 文件联动，便于 AI 读取。
 
-许可证保持 AGPL-3.0，第三方说明见 [THIRD_PARTY](THIRD_PARTY.md)。Windows 已验证 Zotero 7.0.32、8.0.4、9.0.6、10.0.6；macOS 原生验收待完成。云端 OCR 上传 PDF，文本整理在本机运行，检查更新仅匿名读取版本清单。
+## 公开入口
+
+- 源码：[Philippyang21/zotero-pdf-helper](https://github.com/Philippyang21/zotero-pdf-helper)
+- 正式发布：[v0.1.18](https://github.com/Philippyang21/zotero-pdf-helper/releases/tag/v0.1.18)
+- 社区：[插件商店](https://zotero-chinese.com/plugins/)
+- 社区发布目录：[plugins.json](https://raw.githubusercontent.com/zotero-chinese/zotero-plugins/gh-pages/dist/plugins.json)
+
+许可证为AGPL-3.0。版权页提取及Markdown同步在本机进行；新OCR任务会上传PDF，是否跨设备同步MD取决于用户的Zotero文件同步设置。插件内检查更新独立使用GitHub对应版本发布页。

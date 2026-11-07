@@ -54,6 +54,7 @@ with zipfile.ZipFile(xpi) as archive:
     for asset in ('content/text/options.js','content/text/protected.js','content/text/lineBreaks.js',
                   'content/text/whitespace.js','content/text/punctuation.js','content/text/index.js',
                   'content/text/annotations.js','content/textUI.js','content/textPreferences.js',
+                  'content/markdownHighlights.js','content/markdownPreferences.js',
                   'content/textDialog.xhtml','content/textDialog.js','content/preferences.css',
                   'content/preferences.js','content/preferences.xhtml','content/updates.js',
                   'content/updatePreferences.js','update-config.json'):
