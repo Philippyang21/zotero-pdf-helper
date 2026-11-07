@@ -1,0 +1,31 @@
+{
+  "tag": "v0.1.18",
+  "releaseId": 437389043,
+  "expectedTagSha": "ad85f7bc51a71f33613e532be473ba634bde0e6e",
+  "assets": [
+    {
+      "name": "pdf-helper-0.1.18-bundle.zip",
+      "id": 719855821,
+      "size": 5262492,
+      "sha256": "619295355a88934727d1aeba12aecda883dd00c8f3465f638a42cb6b53f67f2c"
+    },
+    {
+      "name": "pdf-helper-0.1.18-source.zip",
+      "id": 719855790,
+      "size": 2374468,
+      "sha256": "fdc02ca4f96a05a1ecf81033e4407db23445c0fbe98fe71640936d0637fe6f36"
+    },
+    {
+      "name": "pdf-helper-0.1.18.xpi",
+      "id": 719855769,
+      "size": 2315194,
+      "sha256": "87b2e3037b0045e8fd3f3044d45c9d53a65b33d127f6c0bc0851abf554084107"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "id": 719855842,
+      "size": 278,
+      "sha256": "bfdc6b2aa0790c8934feb13267d7588848ec849d1ca92c7fb9acb5e949111abd"
+    }
+  ]
+}

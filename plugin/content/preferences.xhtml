@@ -33,12 +33,9 @@
       <html:div id="markdown-sync-settings" class="pocr-card">
        <html:h3>Markdown 高亮同步</html:h3>
        <html:p>将 PDF 中的高亮、下划线和批注同步到对应 MD，供本地大模型和其他阅读工具读取。</html:p>
-       <html:label class="pocr-field" for="markdown-sync-pdf"><html:span>PDF 附件</html:span><html:select id="markdown-sync-pdf"></html:select></html:label>
-       <html:p class="pocr-help">先在文库中选中 PDF，或打开 PDF 阅读器，再点“刷新 PDF 列表”。已开启同步的 PDF 也会列在这里。</html:p>
-       <html:label class="pocr-field" for="markdown-sync-md"><html:span>对应的 Markdown 附件</html:span><html:select id="markdown-sync-md"></html:select></html:label>
-       <html:div class="pocr-actions"><html:button type="button" id="markdown-sync-refresh">刷新 PDF 列表</html:button><html:button type="button" id="markdown-sync-enable" class="pocr-primary">开启自动同步</html:button><html:button type="button" id="markdown-sync-now">立即同步</html:button><html:button type="button" id="markdown-sync-stop">停止自动同步</html:button></html:div>
+       <html:label class="pocr-check"><html:input id="markdown-sync-enabled" type="checkbox" /><html:span>自动同步所有文献的 PDF 高亮到 Markdown<html:small>开启后补同步已有高亮，之后新增、修改或删除高亮时自动更新，无需逐条设置。</html:small></html:span></html:label>
        <html:p id="markdown-sync-status" class="pocr-callout" role="status" aria-live="polite">正在读取同步设置…</html:p>
-       <html:p class="pocr-help">本区操作确认后立即生效，不需要点击下方保存按钮，也不受“引用文本整理”开关影响。PDF 与 MD 需位于同一文献条目下；首次修改前备份原 MD，停止同步后保留现有标记。</html:p>
+       <html:p class="pocr-help">按同一文献条目下 PDF 与 MD 附件的标题或文件名自动配对。只处理 .md 文件，不将 Zotero 笔记或注释当作同步文件。首次修改前备份原 MD；关闭后保留现有标记。本开关立即生效。</html:p>
       </html:div>
       <html:div class="pocr-card">
        <html:h3>整理方式</html:h3><html:label class="pocr-field" for="text-preset"><html:span>先选一套常用规则</html:span><html:select id="text-preset"><html:option value="paper">论文引用（推荐）</html:option><html:option value="light">轻度整理</html:option><html:option value="custom">自定义</html:option></html:select></html:label><html:p id="text-preset-description" class="pocr-help"></html:p>

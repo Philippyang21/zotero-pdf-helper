@@ -44,66 +44,118 @@ test('user marks, BOM and blank lines are preserved after deleting the final ann
 function fixture(){
  const files=new Map(),items=new Map(),saved=[],notifications=[];let observer;
  const item=(id,key,fields={})=>{const v={id,key,libraryID:1,parentID:1,deleted:false,isAttachment:()=>true,isAnnotation:()=>false,isEditable:()=>true,
-  isLinkedFileAttachment:()=>false,getFilePathAsync:async()=>v.file,saveTx:async()=>saved.push(id),...fields};items.set(id,v);return v;};
- const parent=item(1,'PARENT01',{getAttachments:()=>[2,3]});
- const pdf=item(2,'PDF00001',{attachmentReaderType:'pdf',attachmentFilename:'scan.pdf',getAnnotations:()=>[...items.values()].filter(i=>i.parentID===2&&!i.deleted)});
- const md=item(3,'MD000001',{attachmentFilename:'scan.md',file:'/scan.md'});
- const a=item(4,'ANN00001',{parentID:2,isAttachment:()=>false,isAnnotation:()=>true,annotationType:'highlight',annotationText:'正文内容',annotationPageLabel:'3',annotationSortIndex:'00003'});
- files.set(md.file,Buffer.from('正文内容。\n'));
- const Zotero={Items:{get:id=>items.get(id),getByLibraryAndKey:(lib,key)=>[...items.values()].find(i=>i.libraryID===lib&&i.key===key)},
-  Libraries:{get:()=>({editable:true,filesEditable:true})},Sync:{Storage:{Local:{SYNC_STATE_TO_UPLOAD:1}}},
+  getField:()=>v.title||v.attachmentFilename||'',isLinkedFileAttachment:()=>false,getFilePathAsync:async()=>v.file,
+  saveTx:async options=>{saved.push(id);observer?.notify('modify','item',[id],{[id]:options?.notifierData});},...fields};items.set(id,v);return v;};
+ const document=(id,key)=>item(id,key,{isAttachment:()=>false,getAttachments:()=>[...items.values()].filter(i=>i.parentID===id&&i.isAttachment()&&!i.deleted).map(i=>i.id)});
+ const parent=document(1,'PARENT01');
+ function book(id,name){
+  const p=document(id,'PARENT'+id),pdf=item(id+1,'PDF'+String(id).padStart(5,'0'),{parentID:id,attachmentReaderType:'pdf',attachmentFilename:name+'.pdf',getAnnotations:()=>[...items.values()].filter(i=>i.parentID===id+1&&!i.deleted)});
+  const md=item(id+2,'MD'+String(id).padStart(6,'0'),{parentID:id,attachmentFilename:name+'.ocr.md',file:'/'+name+'.md'});
+  const a=item(id+3,'ANN'+String(id).padStart(5,'0'),{parentID:pdf.id,isAttachment:()=>false,isAnnotation:()=>true,annotationType:'highlight',annotationText:'正文内容',annotationPageLabel:'3',annotationSortIndex:'00003'});
+  files.set(md.file,Buffer.from('正文内容。\n'));return {parent:p,pdf,md,a};
+ }
+ items.delete(1);const first=book(1,'scan');
+ const libraries=new Map([[1,{libraryID:1,editable:true,filesEditable:true}]]);
+ const Zotero={Items:{get:id=>items.get(id)||false,getAsync:async ids=>Array.isArray(ids)?ids.map(id=>items.get(id)||false):items.get(ids)||false,
+  getAll:async lib=>[...items.values()].filter(i=>i.libraryID===lib&&!i.deleted),getByLibraryAndKey:(lib,key)=>[...items.values()].find(i=>i.libraryID===lib&&i.key===key)||false},
+  Libraries:{get:id=>libraries.get(id),getAll:()=>[...libraries.values()]},Sync:{Storage:{Local:{SYNC_STATE_TO_UPLOAD:1}}},
   Notifier:{registerObserver:o=>{observer=o;return 'observer';},unregisterObserver:()=>{observer=null;}},logError:()=>{}};
  const IOUtils={exists:async p=>files.has(p),read:async p=>new Uint8Array(files.get(p)),readJSON:async p=>JSON.parse(files.get(p)),
   writeJSON:async(p,v)=>files.set(p,Buffer.from(JSON.stringify(v))),makeDirectory:async()=>{},copy:async(a,b)=>files.set(b,files.get(a)),
   writeUTF8:async(p,v)=>files.set(p,Buffer.from(v))};
- const app={data:'/data',confirm:()=>true,notify:t=>notifications.push(t)};
+ const app={data:'/data',notify:t=>notifications.push(t)};
  const c=load({Zotero,IOUtils,PathUtils:{join:path.posix.join}}),sync=new c.PDFHelperMarkdownSync(app);
- return {c,sync,Zotero,IOUtils,files,items,pdf,md,a,saved,notifications,app,observer:()=>observer};
+ return {c,sync,Zotero,IOUtils,files,items,libraries,...first,saved,notifications,app,item,book,observer:()=>observer};
 }
-test('enable, automatic modification and permanent deletion update the same attachment and retain a backup',async()=>{
- const f=fixture();await f.sync.init();await f.sync.enable(f.pdf);
- assert.match(f.files.get('/scan.md').toString(),/<mark data-pdf-helper=/);
- assert.equal(f.files.get('/data/markdown-backups/1-MD000001.md').toString(),'正文内容。\n');
- f.a.annotationText='内容';f.observer().notify('modify','item',[4]);
- await new Promise(r=>setTimeout(r,500));await Promise.all(f.sync.queues.values());
- assert.match(f.files.get('/scan.md').toString(),/正文<mark[^>]+>内容<\/mark>/);
- f.items.delete(4);const get=f.Zotero.Items.get;f.Zotero.Items.get=id=>id===4?false:get(id);f.observer().notify('delete','item',[4]);
- await new Promise(r=>setTimeout(r,500));await Promise.all(f.sync.queues.values());
- assert.equal(f.files.get('/scan.md').toString(),'正文内容。\n');
- assert.equal(f.md.attachmentSyncState,1);assert.ok(f.saved.includes(3));await f.sync.close();
+const drain=async f=>{await f.sync.scanPromise;await new Promise(r=>setTimeout(r,500));await Promise.all(f.sync.queues.values());};
+test('one global switch backfills all documents, persists state, and excludes Zotero notes and annotations as files',async()=>{
+ const f=fixture(),second=f.book(10,'other');
+ f.item(20,'NOTEMD01',{parentID:1,attachmentFilename:'scan.md',isAttachment:()=>false,file:'/note.md'});
+ f.files.set('/note.md',Buffer.from('笔记不是附件'));
+ await f.sync.init();assert.equal(f.sync.enabled,false);assert.equal(f.saved.length,0);
+ await f.sync.setEnabled(true);await f.sync.scanPromise;
+ for(const md of [f.md,second.md])assert.match(f.files.get(md.file).toString(),/<mark data-pdf-helper=/);
+ assert.equal(f.files.get('/note.md').toString(),'笔记不是附件');assert.equal(f.sync.status.synced,2);
+ const state=JSON.parse(f.files.get('/data/markdown-highlights.json'));assert.equal(state.schema,2);assert.equal(state.enabled,true);
+ assert.equal(f.files.get('/data/markdown-backups/1-'+f.md.key+'.md').toString(),'正文内容。\n');await f.sync.close();
 });
-test('restart reconciles offline deletion and stop disables later writes',async()=>{
- const f=fixture();await f.sync.init();await f.sync.enable(f.pdf);await f.sync.close();f.a.deleted=true;
- const next=new f.c.PDFHelperMarkdownSync(f.app);await next.init();await next.sync(f.pdf);
- assert.equal(f.files.get('/scan.md').toString(),'正文内容。\n');
- await next.stop(f.pdf);f.a.deleted=false;await next.sync(f.pdf);assert.equal(f.files.get('/scan.md').toString(),'正文内容。\n');await next.close();
+test('title and filename matching supports similar names and multiple PDFs without a selector',()=>{
+ const f=fixture(),match=f.c.PDFHelperMarkdown.matchAttachment;
+ f.pdf.title='考文叙事录（解志熙）';f.md.attachmentFilename='result.md';f.md.title='考文叙事录 解志熙 - OCR';
+ assert.equal(match(f.pdf,[f.pdf,f.md]),f.md);
+ f.pdf.title='中国现代文学史料学';f.pdf.attachmentFilename='book.pdf';f.md.title='中国现代文学史料学 文字层';assert.equal(match(f.pdf,[f.pdf,f.md]),f.md);
+ f.pdf.title='中国现代文学史料学 (z-library.sk, 1lib.sk, z-lib.sk)';f.md.title='中国现代文学史料学';assert.equal(match(f.pdf,[f.pdf,f.md]),f.md);
+ f.md.title='中国现代文学史料论';assert.equal(match(f.pdf,[f.pdf,f.md]),f.md);
+ const other=f.item(30,'PDF00030',{parentID:1,attachmentReaderType:'pdf',attachmentFilename:'第二卷.pdf'});
+ const otherMD=f.item(31,'MD000030',{parentID:1,attachmentFilename:'第二卷.md'});
+ assert.equal(match(other,[f.pdf,f.md,other,otherMD]),otherMD);
+ const note={...otherMD,isAttachment:()=>false};assert.equal(match(other,[other,note]),null);
 });
-test('erase notification with a cached tombstone still resolves its original PDF',async()=>{
- const f=fixture();await f.sync.init();await f.sync.enable(f.pdf);f.a.parentID=false;
- f.observer().notify('delete','item',[4]);await new Promise(r=>setTimeout(r,500));await Promise.all(f.sync.queues.values());
- assert.equal(f.files.get('/scan.md').toString(),'正文内容。\n');await f.sync.close();
+test('a missing or tied title match is skipped without prompting',()=>{
+ const f=fixture(),match=f.c.PDFHelperMarkdown.matchAttachment;
+ f.md.attachmentFilename='完全不同的附件.md';assert.equal(match(f.pdf,[f.pdf,f.md]),null);
+ f.md.attachmentFilename='scan.md';const duplicate={...f.md,id:99,key:'MD000099'};
+ assert.equal(match(f.pdf,[f.pdf,f.md,duplicate]),null);
 });
-test('a concurrent external edit wins and the first backup remains unchanged',async()=>{
- const f=fixture();await f.sync.init();let reads=0;
- const originalRead=f.IOUtils.read;f.IOUtils.read=async p=>{if(++reads===2)f.files.set(p,Buffer.from('外部刚修改'));return originalRead(p);};
- await assert.rejects(()=>f.sync.enable(f.pdf),/其他程序/);
- assert.equal(f.files.get('/scan.md').toString(),'外部刚修改');assert.equal(Object.keys(f.sync.bindings).length,0);
- await f.sync.close();
+test('schema 1 pairs migrate to global mode and preserve an existing explicit relationship',async()=>{
+ const f=fixture();f.md.attachmentFilename='previous-choice.md';
+ f.files.set('/data/markdown-highlights.json',Buffer.from(JSON.stringify({schema:1,bindings:{['1:'+f.pdf.key]:{libraryID:1,pdfKey:f.pdf.key,mdKey:f.md.key}}})));
+ await f.sync.init();await f.sync.scanPromise;assert.equal(f.sync.enabled,true);assert.match(f.files.get(f.md.file).toString(),/<mark data-/);
+ assert.equal(JSON.parse(f.files.get('/data/markdown-highlights.json')).schema,2);await f.sync.close();
 });
-test('missing files, invalid UTF-8, read-only libraries and changed parent do not overwrite MD',async()=>{
- for(const kind of ['missing','utf8','readonly','moved']){
-  const f=fixture();await f.sync.init();const before=f.files.get('/scan.md');
-  if(kind==='missing')f.files.delete('/scan.md');
-  if(kind==='utf8')f.files.set('/scan.md',Buffer.from([255,254,255]));
-  if(kind==='readonly')f.Zotero.Libraries.get=()=>({editable:false,filesEditable:false});
-  if(kind==='moved')f.md.parentID=99;
-  const expected=f.files.get('/scan.md');
-  await assert.rejects(()=>f.sync.enable(f.pdf));assert.equal(f.files.get('/scan.md'),expected);await f.sync.close();
- }
+test('modification and permanent deletion automatically update files without a per-PDF setup',async()=>{
+ const f=fixture();await f.sync.init();await f.sync.setEnabled(true);await f.sync.scanPromise;
+ f.a.annotationText='内容';f.observer().notify('modify','item',[f.a.id]);await drain(f);
+ assert.match(f.files.get(f.md.file).toString(),/正文<mark[^>]+>内容<\/mark>/);
+ const id=f.a.id;f.items.delete(id);f.observer().notify('delete','item',[id]);await drain(f);
+ assert.equal(f.files.get(f.md.file).toString(),'正文内容。\n');assert.equal(f.md.attachmentSyncState,1);await f.sync.close();
 });
-test('cancel has no file writes or bindings; one MD cannot be linked to two PDFs',async()=>{
- const f=fixture();await f.sync.init();f.app.confirm=()=>false;await f.sync.enable(f.pdf);
- assert.equal(Object.keys(f.sync.bindings).length,0);assert.equal(f.files.size,1);
- f.app.confirm=()=>true;await f.sync.enable(f.pdf);
- const other={...f.pdf,id:20,key:'PDF00002'};await assert.rejects(()=>f.sync.enable(other),/另一个 PDF/);await f.sync.close();
+test('global off stops all documents and global on reconciles changes made while off',async()=>{
+ const f=fixture(),second=f.book(10,'other');await f.sync.init();await f.sync.setEnabled(true);await f.sync.scanPromise;
+ const before=f.files.get(f.md.file).toString();await f.sync.setEnabled(false);
+ f.a.annotationText='内容';second.a.deleted=true;f.observer().notify('modify','item',[f.a.id,second.a.id]);await drain(f);
+ assert.equal(f.files.get(f.md.file).toString(),before);
+ await f.sync.setEnabled(true);await f.sync.scanPromise;assert.match(f.files.get(f.md.file).toString(),/正文<mark[^>]+>内容/);
+ assert.equal(f.files.get(second.md.file).toString(),'正文内容。\n');await f.sync.close();
+});
+test('a newly added matching MD automatically synchronizes a previously unmatched document',async()=>{
+ const f=fixture();f.items.delete(f.md.id);await f.sync.init();await f.sync.setEnabled(true);await f.sync.scanPromise;
+ assert.equal(f.sync.status.skipped,1);f.items.set(f.md.id,f.md);f.observer().notify('add','item',[f.md.id]);await drain(f);
+ assert.match(f.files.get(f.md.file).toString(),/<mark data-/);await f.sync.close();
+});
+test('startup reconciles offline deletion and keeps a saved global off switch off',async()=>{
+ const f=fixture();await f.sync.init();await f.sync.setEnabled(true);await f.sync.scanPromise;await f.sync.close();f.a.deleted=true;
+ const next=new f.c.PDFHelperMarkdownSync(f.app);await next.init();await next.scanPromise;
+ assert.equal(f.files.get(f.md.file).toString(),'正文内容。\n');await next.setEnabled(false);await next.close();
+ const off=new f.c.PDFHelperMarkdownSync(f.app);await off.init();assert.equal(off.enabled,false);assert.equal(off.scanPromise,undefined);await off.close();
+});
+test('a later file download synchronizes an already-known MD without asking for a new pairing',async()=>{
+ const f=fixture();f.files.delete(f.md.file);await f.sync.init();await f.sync.setEnabled(true);await f.sync.scanPromise;
+ f.files.set(f.md.file,Buffer.from('正文内容。\n'));f.observer().notify('download','file',[f.md.id]);await drain(f);
+ assert.match(f.files.get(f.md.file).toString(),/<mark data-/);await f.sync.close();
+});
+test('switching off during a pending read prevents the pending write',async()=>{
+ const f=fixture();await f.sync.init();let unblock,entered;
+ const gate=new Promise(r=>unblock=r),ready=new Promise(r=>entered=r),read=f.IOUtils.read;
+ f.IOUtils.read=async p=>{entered();await gate;return read(p);};
+ await f.sync.setEnabled(true);await ready;await f.sync.setEnabled(false);unblock();await f.sync.scanPromise;
+ assert.equal(f.files.get(f.md.file).toString(),'正文内容。\n');await f.sync.close();
+});
+test('a concurrent external edit wins, and one failed document does not stop others',async()=>{
+ const f=fixture(),second=f.book(10,'other');await f.sync.init();let reads=0;const read=f.IOUtils.read;
+ f.IOUtils.read=async p=>{if(p===f.md.file&&++reads===2)f.files.set(p,Buffer.from('外部刚修改'));return read(p);};
+ await f.sync.setEnabled(true);await f.sync.scanPromise;
+ assert.equal(f.files.get(f.md.file).toString(),'外部刚修改');assert.match(f.files.get(second.md.file).toString(),/<mark data-/);
+ assert.equal(f.sync.status.failed,1);assert.equal(f.sync.status.synced,1);await f.sync.close();
+});
+test('undownloaded MDs and read-only libraries are skipped and own save notifications do not loop',async()=>{
+ const f=fixture();f.files.delete(f.md.file);f.libraries.set(2,{libraryID:2,editable:false,filesEditable:false});
+ const getAll=f.Zotero.Items.getAll;f.Zotero.Items.getAll=async lib=>{assert.notEqual(lib,2);return getAll(lib);};
+ await f.sync.init();await f.sync.setEnabled(true);await f.sync.scanPromise;assert.equal(f.sync.status.skipped,1);assert.equal(f.sync.timers.size,0);
+ f.files.set(f.md.file,Buffer.from('正文内容。\n'));await f.sync.sync(f.pdf);assert.equal(f.sync.timers.size,0);await f.sync.close();
+});
+test('a failed stored-file sync flag is retried without losing the file backup',async()=>{
+ const f=fixture();await f.sync.init();let fail=true;f.md.saveTx=async()=>{if(fail)throw Error('DB busy');f.saved.push(f.md.id);};
+ await f.sync.setEnabled(true);await f.sync.scanPromise;assert.equal(f.sync.status.failed,1);fail=false;
+ await f.sync.sync(f.pdf);assert.ok(f.saved.includes(f.md.id));assert.equal(f.files.get('/data/markdown-backups/1-'+f.md.key+'.md').toString(),'正文内容。\n');await f.sync.close();
 });

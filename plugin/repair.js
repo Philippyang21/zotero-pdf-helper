@@ -558,7 +558,7 @@ var PDFRepair = class {
   async _ensureSidecars(job,item,mode) {
     if (!['archive','hidden','import','link'].includes(mode)) throw new Error('识别结果保存方式无效');
     const markdownBinding=this.markdownSync?.bindings[item.libraryID+':'+item.key];
-    if(markdownBinding && mode==='archive')throw new Error('此 PDF 已开启 Markdown 高亮同步。请先停止同步，再将 MD/JSON 移到独立存档；也可以继续放在原文献下');
+    if(markdownBinding && this.markdownSync.enabled && mode==='archive')throw new Error('Markdown 高亮自动同步已开启。请先在“高亮与复制”中关闭同步，再将 MD/JSON 移到独立存档；也可以继续放在原文献下');
     const receipt=this.receipts[job.id] ||= {};
     if (!await IOUtils.exists(job.md) || !await IOUtils.exists(job.json)) throw new Error('任务结果尚未就绪或已被移除');
     if (mode==='hidden') {

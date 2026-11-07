@@ -38,6 +38,12 @@ python package_release.py --out ./artifacts
 
 ## 正式发布顺序
 
+### 已明确授权的同版本替换
+
+保持0.1.18时，先备份原Release的四个附件、摘要和标签提交，再将当前公开状态写入 `release/replacement-v0.1.18.json`。推送已审阅提交到 `release/replace-v0.1.18` 分支可触发替换流程；也可在当前源码分支手动运行工作流并启用 `replace_published`。普通标签发布仍拒绝改写已公开版本。
+
+替换流程先完成构建与测试，核对旧Release ID、标签SHA及各附件ID/摘要并下载备份，保存30天CI恢复材料；然后暂存并核对新附件，更新标签与同名附件，最后刷新原Release的校验表。中途失败会恢复旧标签、旧附件和旧说明。替换后应匿名下载四附件并核对源码/标签一致。已安装用户需手动覆盖同版本包，检查更新不会将同版本识别为新版。
+
 1. 审查源码与测试，使用现有Git仓库。改号运行 `python scripts/set_version.py X.Y.Z`；同步README公开版本、徽章、XPI文件名和日志措辞后重建。
 2. 提交推送经过审阅的源文件；以同一提交创建vX.Y.Z正式Release和标签。标签中plugin/manifest.json的版本、ID和范围必须与同版XPI一致。
 3. 上传 `pdf-helper-X.Y.Z.xpi`、源码ZIP、ASCII命名的-bundle.zip及SHA256SUMS.txt，保留既有v0.1.13及附件。

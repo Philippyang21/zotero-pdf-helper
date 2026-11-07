@@ -3,18 +3,24 @@ name: Publish reviewed release
 on:
   push:
     tags: ['v*']
+    branches: ['release/replace-v0.1.18']
   workflow_dispatch:
     inputs:
       tag:
         description: Existing release tag (vX.Y.Z)
         required: true
         type: string
+      replace_published:
+        description: Replace the reviewed published version using its pinned backup manifest
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ inputs.tag || github.ref_name }}
+  group: release-${{ github.ref == 'refs/heads/release/replace-v0.1.18' && 'v0.1.18' || inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -24,11 +30,12 @@ jobs:
     permissions:
       contents: write
     env:
-      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      RELEASE_TAG: ${{ github.ref == 'refs/heads/release/replace-v0.1.18' && 'v0.1.18' || inputs.tag || github.ref_name }}
+      REPLACE_PUBLISHED: ${{ github.ref == 'refs/heads/release/replace-v0.1.18' || inputs.replace_published == true }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ (github.ref == 'refs/heads/release/replace-v0.1.18' || inputs.replace_published == true) && github.ref || inputs.tag || github.ref }}
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -71,7 +78,40 @@ jobs:
               digest, name = line.split('  ')
               assert hashlib.sha256((folder / name).read_bytes()).hexdigest() == digest
           PY
+      - name: Back up the reviewed published release
+        if: env.REPLACE_PUBLISHED == 'true'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const {execFileSync} = require('node:child_process');
+            const tag = process.env.RELEASE_TAG;
+            const result = await require(process.cwd() + '/scripts/release-replacement.cjs').prepare({
+              github, ...context.repo, tag,
+              commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),
+              configPath:`release/replacement-${tag}.json`,backupDir:'release-backup'});
+            core.notice(JSON.stringify(result));
+      - name: Preserve the verified rollback files
+        if: env.REPLACE_PUBLISHED == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: published-release-backup-${{ github.run_id }}
+          path: release-backup
+          retention-days: 30
+          if-no-files-found: error
+      - name: Replace the reviewed same-version release
+        if: env.REPLACE_PUBLISHED == 'true'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const {execFileSync} = require('node:child_process');
+            const tag = process.env.RELEASE_TAG;
+            const result = await require(process.cwd() + '/scripts/release-replacement.cjs').replace({
+              github, ...context.repo, tag,
+              commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),
+              backupDir:'release-backup',artifactDir:'artifacts',notesPath:`release/notes-${tag}.md`,runId:context.runId});
+            core.notice(JSON.stringify(result));
       - name: Upload complete draft, then publish
+        if: env.REPLACE_PUBLISHED != 'true'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |

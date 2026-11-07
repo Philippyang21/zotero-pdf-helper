@@ -72,12 +72,55 @@ var PDFHelperMarkdown = (()=>{
     }
     return {text,total:entries.length,matched:entries.filter(e=>e.matched).length};
   }
-  return {render,strip};
+  const isPDF=item=>!!item&&!item.deleted&&item.isAttachment()&&item.attachmentReaderType==='pdf';
+  const isMD=item=>!!item&&!item.deleted&&item.isAttachment()&&/\.md$/i.test(item.attachmentFilename||'');
+  function names(item){
+    return [...new Set([item.attachmentFilename,item.getField?.('title')].filter(Boolean).map(value=>
+      String(value).normalize('NFKC').toLowerCase().replace(/\.(?:pdf|md)$/i,'')
+        .replace(/\s*[\[(][^\])]*(?:z[- .]?lib|1lib)[^\])]*[\])]/gi,'')
+        .replace(/[._\s-]*(?:ocr|markdown|识别结果|文字识别结果)$/i,'').replace(/[^\p{L}\p{N}]/gu,'')))].filter(Boolean);
+  }
+  function similarity(a,b){
+    if(a===b)return 1;
+    const short=a.length<=b.length?a:b,long=a.length>b.length?a:b;
+    if(short.length<4)return 0;
+    if(long.includes(short))return short.length/long.length>=.6?.93:0;
+    const grams=value=>{const out=new Set();for(let i=0;i<value.length-1;i++)out.add(value.slice(i,i+2));return out;};
+    const x=grams(a),y=grams(b),common=[...x].filter(g=>y.has(g)).length;
+    let result=2*common/(x.size+y.size);
+    if(long.length<=200&&short.length/long.length>=.65){
+      let row=Array.from({length:b.length+1},(_,i)=>i);
+      for(let i=1;i<=a.length;i++){
+        const next=[i];for(let j=1;j<=b.length;j++)next[j]=Math.min(next[j-1]+1,row[j]+1,row[j-1]+(a[i-1]===b[j-1]?0:1));
+        row=next;
+      }
+      result=Math.max(result,1-row[b.length]/long.length);
+    }
+    return result;
+  }
+  const score=(pdf,md)=>Math.max(0,...names(pdf).flatMap(a=>names(md).map(b=>similarity(a,b))));
+  function matchAttachment(pdf,siblings,bindings={}){
+    if(!isPDF(pdf))return null;
+    const pdfs=siblings.filter(isPDF),markdowns=siblings.filter(isMD);
+    const previous=bindings[pdf.libraryID+':'+pdf.key];
+    const old=markdowns.find(md=>md.key===previous?.mdKey);
+    const claimed=md=>Object.values(bindings).some(b=>b.libraryID===pdf.libraryID&&b.pdfKey!==pdf.key&&b.mdKey===md.key&&pdfs.some(p=>p.key===b.pdfKey));
+    if(old&&!claimed(old))return old;
+    const ranked=markdowns.map(md=>({md,score:score(pdf,md)})).filter(v=>v.score>=.78).sort((a,b)=>b.score-a.score);
+    if(!ranked.length||(ranked[1]&&ranked[0].score-ranked[1].score<.05))return null;
+    const best=ranked[0];
+    if(pdfs.some(other=>other.id!==pdf.id&&score(other,best.md)>=best.score-.05))return null;
+    if(claimed(best.md))return null;
+    return best.md;
+  }
+  return {render,strip,isPDF,isMD,matchAttachment};
 })();
 
 var PDFHelperMarkdownSync = class {
   constructor(app){
-    this.app=app;this.bindings={};this.parents=new Map();this.timers=new Map();this.queues=new Map();this.failed=new Set();this.closed=false;this.ready=false;
+    this.app=app;this.bindings={};this.parents=new Map();this.attachmentParents=new Map();this.documents=new Map();
+    this.timers=new Map();this.queues=new Map();this.failed=new Set();this.closed=false;this.ready=false;this.enabled=false;
+    this.generation=0;this.listeners=new Set();this.dirty=new Set();this.status={running:false,synced:0,skipped:0,failed:0};
     this.path=PathUtils.join(app.data,'markdown-highlights.json');
   }
   key(pdf){return pdf.libraryID+':'+pdf.key;}
@@ -85,19 +128,19 @@ var PDFHelperMarkdownSync = class {
   async init(){
     if(await IOUtils.exists(this.path)){
       const saved=await IOUtils.readJSON(this.path);
-      if(saved.schema!==1||!saved.bindings||typeof saved.bindings!=='object')throw new Error('Markdown 同步设置损坏');
+      if(![1,2].includes(saved.schema)||!saved.bindings||typeof saved.bindings!=='object'||Array.isArray(saved.bindings)||
+          (saved.schema===2&&typeof saved.enabled!=='boolean'))throw new Error('Markdown 同步设置损坏');
       this.bindings=saved.bindings;
+      this.enabled=saved.schema===1?Object.keys(this.bindings).length>0:saved.enabled;
+      if(saved.schema===1)await this.persist();
     }
-    this.observer=Zotero.Notifier.registerObserver({notify:(...args)=>this.notify(...args)},['item'],'pdf-helper-markdown');
+    this.observer=Zotero.Notifier.registerObserver({notify:(...args)=>this.notify(...args)},['item','file'],'pdf-helper-markdown');
     this.ready=true;
-    for(const binding of Object.values(this.bindings)){
-      const pdf=this.pdf(binding);
-      if(pdf&&!pdf.deleted){this.snapshot(pdf);this.schedule(pdf);}
-    }
+    if(this.enabled)this.scan();
   }
   persist(){
     this.persistence=(this.persistence||Promise.resolve()).catch(()=>{}).then(()=>
-      IOUtils.writeJSON(this.path,{schema:1,bindings:this.bindings},{tmpPath:this.path+'.tmp'}));
+      IOUtils.writeJSON(this.path,{schema:2,enabled:this.enabled,bindings:this.bindings},{tmpPath:this.path+'.tmp'}));
     return this.persistence;
   }
   snapshot(pdf){
@@ -107,25 +150,84 @@ var PDFHelperMarkdownSync = class {
         comment:a.annotationComment,type:a.annotationType,sortIndex:a.annotationSortIndex};
     });
   }
-  notify(event,type,ids){
-    if(this.closed||type!=='item'||!['add','modify','delete','trash'].includes(event))return;
+  subscribe(listener){this.listeners.add(listener);return ()=>this.listeners.delete(listener);}
+  emit(){for(const listener of this.listeners)try{listener();}catch(_){} }
+  async setEnabled(value){
+    if(!this.ready||this.closed)throw new Error('Markdown 同步尚未就绪，请重启 Zotero');
+    const before=this.enabled;this.enabled=!!value;this.generation++;
+    if(!this.enabled){for(const timer of this.timers.values())clearTimeout(timer);this.timers.clear();}
+    try{await this.persist();}catch(e){this.enabled=before;this.emit();if(before)this.scan();throw e;}
+    this.emit();if(this.enabled)this.scan();
+  }
+  scan(){
+    const generation=this.generation;
+    if(this.scanPromise&&this.scanGeneration===generation)return this.scanPromise;
+    const previous=this.scanPromise||Promise.resolve();this.scanGeneration=generation;
+    const action=previous.catch(()=>{}).then(()=>this.scanAll(generation));this.scanPromise=action;
+    action.catch(()=>{this.status.failed++;this.emit();}).finally(()=>{if(this.scanPromise===action)this.scanPromise=null;});
+    return action;
+  }
+  async scanAll(generation){
+    if(!this.enabled||this.closed||generation!==this.generation)return;
+    this.status={running:true,synced:0,skipped:0,failed:0};this.emit();
+    try{
+      for(const library of Zotero.Libraries.getAll()){
+        if(!library.editable||!library.filesEditable)continue;
+        let items;
+        try{items=await Zotero.Items.getAll(library.libraryID,false,false);}
+        catch(_){this.status.failed++;this.emit();continue;}
+        for(const pdf of items){
+          if(!this.enabled||this.closed||generation!==this.generation)return;
+          if(!PDFHelperMarkdown.isPDF(pdf)||!pdf.parentID)continue;
+          try{const result=await this.sync(pdf);this.status[result?'synced':'skipped']++;}
+          catch(_){this.status.failed++;}
+          this.emit();
+        }
+      }
+    }finally{this.status.running=false;this.emit();}
+  }
+  async prepare(pdf){
+    if(pdf.loadAllData)await pdf.loadAllData();
+    for(const annotation of pdf.getAnnotations())if(annotation.loadAllData)await annotation.loadAllData();
+    this.snapshot(pdf);
+    const parent=pdf.parentID&&await Zotero.Items.getAsync(pdf.parentID);
+    if(!parent||parent.deleted)return [];
+    if(parent.loadAllData)await parent.loadAllData();
+    const siblings=(await Zotero.Items.getAsync(parent.getAttachments())).filter(item=>item&&!item.deleted&&item.isAttachment());
+    this.documents.set(parent.id,siblings.filter(PDFHelperMarkdown.isPDF).map(item=>item.id));
+    for(const item of siblings)this.attachmentParents.set(item.id,parent.id);
+    return siblings;
+  }
+  notify(event,type,ids,extraData={}){
+    if(this.closed||!this.enabled||!((type==='item'&&['add','modify','delete','trash','refresh'].includes(event))||
+        (type==='file'&&['download','modify'].includes(event))))return;
     // Do not await writes from a Notifier callback: saveTx also notifies observers.
     for(const id of ids){
+      if(extraData[id]?.pdfHelperMarkdown)continue;
       // get() throws for an erased ID on native Zotero (it is not just false).
       let item;try{item=Zotero.Items.get(id);}catch(_){item=null;}
       // Erase can leave a cached annotation whose parentID has already cleared.
       const parentID=(item&&item.isAnnotation()&&item.parentID)||this.parents.get(id);
       const pdf=parentID&&Zotero.Items.get(parentID);
-      if(pdf&&this.bindings[this.key(pdf)]){this.parents.set(id,parentID);this.schedule(pdf);}
+      if(pdf&&PDFHelperMarkdown.isPDF(pdf)){this.parents.set(id,parentID);this.schedule(pdf);continue;}
+      if(item&&item.isAttachment()){
+        if(PDFHelperMarkdown.isPDF(item)){this.schedule(item);continue;}
+        if(!PDFHelperMarkdown.isMD(item))continue;
+      }else if(!this.attachmentParents.has(id))continue;
+      const documentID=item?.parentID||this.attachmentParents.get(id);
+      const parent=documentID&&Zotero.Items.get(documentID);
+      const pdfIDs=parent&&!parent.deleted?parent.getAttachments():this.documents.get(documentID)||[];
+      for(const pdfID of pdfIDs){const sibling=Zotero.Items.get(pdfID);if(PDFHelperMarkdown.isPDF(sibling))this.schedule(sibling);}
     }
   }
   schedule(pdf){
+    if(!this.enabled||this.closed)return;
     const key=this.key(pdf);clearTimeout(this.timers.get(key));
     this.timers.set(key,setTimeout(()=>{
       this.timers.delete(key);
       this.sync(pdf).catch(()=>{
         Zotero.logError(new Error('Markdown 高亮同步未完成，请在设置的“高亮与复制”中重试。'));
-        if(!this.failed.has(key)){this.failed.add(key);this.app.notify('Markdown 高亮同步未完成，请检查附件是否已下载、文库是否可写，再到设置 → 高亮与复制中重试。',10000);}
+        if(!this.failed.has(key)){this.failed.add(key);this.status.failed++;this.emit();}
       });
     },400));
   }
@@ -136,14 +238,16 @@ var PDFHelperMarkdownSync = class {
     return action;
   }
   async write(pdf){
-    const key=this.key(pdf),binding=this.bindings[key];if(!binding||this.closed)return;
-    const md=Zotero.Items.getByLibraryAndKey(binding.libraryID,binding.mdKey);
+    if(!this.enabled||this.closed||!PDFHelperMarkdown.isPDF(pdf)||!pdf.parentID)return;
+    const generation=this.generation,key=this.key(pdf),siblings=await this.prepare(pdf);
+    if(!this.enabled||this.closed||generation!==this.generation)return;
+    const md=PDFHelperMarkdown.matchAttachment(pdf,siblings,this.bindings);if(!md)return;
     const library=Zotero.Libraries.get(pdf.libraryID);
     if(pdf.deleted||!pdf.isAttachment()||pdf.attachmentReaderType!=='pdf'||!md||!md.isAttachment()||md.deleted||
         !pdf.parentID||md.parentID!==pdf.parentID||!library.editable||!library.filesEditable||!md.isEditable())
       throw new Error('PDF / Markdown 关联或文库权限已变化');
     const path=await md.getFilePathAsync();
-    if(!path||!await IOUtils.exists(path)||! /\.md$/i.test(path))throw new Error('Markdown 附件尚未下载或已丢失');
+    if(!path||!await IOUtils.exists(path)||! /\.md$/i.test(path))return;
     const bytes=await IOUtils.read(path);
     const original=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
     const result=PDFHelperMarkdown.render(original,this.snapshot(pdf),pdf.key);
@@ -155,53 +259,26 @@ var PDFHelperMarkdownSync = class {
       // A concurrent external edit wins; retry from the current file next time.
       const current=await IOUtils.read(path);
       if(current.length!==bytes.length||current.some((v,i)=>v!==bytes[i]))throw new Error('Markdown 正被其他程序修改，请重试');
-      if(this.closed||this.bindings[key]!==binding)return;
+      if(this.closed||!this.enabled||generation!==this.generation)return;
       await IOUtils.writeUTF8(path,result.text,{tmpPath:path+'.pdf-helper.tmp'});
+      this.dirty.add(md.libraryID+':'+md.key);
     }
     // Also retry this flag after a prior saveTx failure, even when bytes match.
-    if(!md.isLinkedFileAttachment()){
+    if(!md.isLinkedFileAttachment()&&(result.text!==original||this.dirty.has(md.libraryID+':'+md.key))){
       md.attachmentSyncState=Zotero.Sync.Storage.Local.SYNC_STATE_TO_UPLOAD;
-      await md.saveTx({skipSelect:true});
+      await md.saveTx({skipSelect:true,notifierData:{pdfHelperMarkdown:true}});
+    }
+    this.dirty.delete(md.libraryID+':'+md.key);
+    if(this.bindings[key]?.mdKey!==md.key){
+      this.bindings[key]={libraryID:pdf.libraryID,pdfKey:pdf.key,mdKey:md.key};await this.persist();
     }
     this.failed.delete(key);return result;
   }
-  async enable(pdf,win,markdown){
-    if(!this.ready||this.closed)throw new Error('Markdown 同步尚未就绪，请检查同步设置文件或重启 Zotero');
-    const parent=Zotero.Items.get(pdf.parentID);
-    if(!parent||parent.deleted)throw new Error('请先将 PDF 与对应 MD 放在同一文献条目下');
-    const children=parent.getAttachments().map(id=>Zotero.Items.get(id)).filter(i=>i&&!i.deleted&&/\.md$/i.test(i.attachmentFilename||''));
-    if(!children.length)throw new Error('条目下没有 MD 附件。请先添加对应 Markdown，或将识别资料收纳到原文献下');
-    const stem=name=>name.replace(/\.pdf$|(?:\.ocr)?\.md$/ig,'');
-    const exact=children.filter(i=>stem(i.attachmentFilename)===stem(pdf.attachmentFilename));
-    let md=markdown||(exact.length===1?exact[0]:children.length===1?children[0]:null);
-    if(markdown&&!children.some(child=>child.id===markdown.id))throw new Error('请选择当前文献条目下的 MD 附件');
-    if(!md){
-      const selected=await this.app.chooseFile(win,'选择当前文献条目下、与此 PDF 对应的 MD 附件','md');
-      if(!selected)return;
-      for(const child of children)if(await child.getFilePathAsync()===selected)md=child;
-      if(!md)throw new Error('请选择已经添加在当前文献条目下的 MD 附件文件');
-    }
-    const key=this.key(pdf);
-    if(Object.entries(this.bindings).some(([k,b])=>k!==key&&b.libraryID===md.libraryID&&b.mdKey===md.key))
-      throw new Error('这个 MD 已关联到另一个 PDF，请为每个 PDF 使用独立的 MD');
-    if(!this.app.confirm(`将当前 PDF 的高亮、下划线和批注同步到 ${md.attachmentFilename}。\n\n可唯一匹配的正文将加上 <mark> 高亮，文末附上页码与摘录。首次改写前保留原文件备份；此后新增、修改、删除注释会自动更新此 MD。是否继续？`,win))return;
-    const before=this.bindings[key];
-    const binding={libraryID:pdf.libraryID,pdfKey:pdf.key,mdKey:md.key};this.bindings[key]=binding;
-    try{await this.sync(pdf);await this.persist();}
-    catch(e){if(before)this.bindings[key]=before;else delete this.bindings[key];throw e;}
-    this.app.notify('已启用 Markdown 高亮同步。后续注释变化会自动保存到此 MD。');
-    return true;
-  }
-  async stop(pdf){
-    if(!this.ready||this.closed)throw new Error('Markdown 同步尚未就绪');
-    delete this.bindings[this.key(pdf)];clearTimeout(this.timers.get(this.key(pdf)));
-    await this.persist();this.app.notify('已停止此 PDF 的自动同步，MD 中现有高亮保留。');
-  }
   async close(){
+    this.closed=true;this.generation++;
     for(const timer of this.timers.values())clearTimeout(timer);this.timers.clear();
     if(this.observer)Zotero.Notifier.unregisterObserver(this.observer);
-    // Flush already scheduled annotation changes before disabling.
-    const jobs=Object.values(this.bindings).map(b=>this.pdf(b)).filter(pdf=>pdf&&!pdf.deleted).map(pdf=>this.sync(pdf));
-    await Promise.allSettled([...this.queues.values(),...jobs]);this.closed=true;
+    // Startup reconciliation catches changes that arrive during shutdown.
+    await Promise.allSettled([...this.queues.values(),this.scanPromise,this.persistence]);this.listeners.clear();
   }
 };

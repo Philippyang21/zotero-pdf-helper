@@ -23,7 +23,7 @@
   "scripts": {
     "build": "node scripts/build-template.cjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/test_plugin.cjs tests/test_text.cjs tests/test_text_ui.cjs tests/test_text_annotations.cjs tests/test_updates.cjs tests/test_template.cjs tests/test_markdown_highlights.cjs tests/test_markdown_preferences.cjs",
+    "test": "node --test tests/test_plugin.cjs tests/test_text.cjs tests/test_text_ui.cjs tests/test_text_annotations.cjs tests/test_updates.cjs tests/test_template.cjs tests/test_markdown_highlights.cjs tests/test_markdown_preferences.cjs tests/test_release_replacement.cjs",
     "check:release": "node scripts/check-release.cjs"
   },
   "dependencies": {

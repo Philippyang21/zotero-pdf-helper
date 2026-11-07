@@ -69,10 +69,11 @@ test('archive does not move hash mismatches or linked files',async()=>{
 });
 
 test('managed MD highlights do not duplicate OCR sidecars and require stopping sync before archiving',async()=>{
- const f=fixture();f.app.markdownSync={bindings:{'1:KEY2':{mdKey:'KEY3'}}};
+ const f=fixture();f.app.markdownSync={enabled:true,bindings:{'1:KEY2':{mdKey:'KEY3'}}};
  f.files.set(f.md.file,f.markdown.render('markdown',[{text:'markdown',key:'ANN00001'}],'KEY2').text);
  await f.app.ensureSidecars(f.job,f.pdf,'import');assert.equal(f.items.size,5);assert.equal(f.app.receipts[f.job.id].md,3);
- await assert.rejects(()=>f.app.ensureSidecars(f.job,f.pdf,'archive'),/先停止同步/);
+ await assert.rejects(()=>f.app.ensureSidecars(f.job,f.pdf,'archive'),/关闭同步/);
+ f.app.markdownSync.enabled=false;await f.app.ensureSidecars(f.job,f.pdf,'archive');
 });
 test('copyright metadata fills only blank supported fields and preserves existing authors',()=>{
  const f=fixture();f.parent.setField('title','已有标题');f.parent.setCreators([{firstName:'',lastName:'原作者',fieldMode:1,creatorTypeID:1}]);
