@@ -1,13 +1,14 @@
 'use strict';
 var RepairProgress = (()=>{
   const labels={queued:'排队中',preparing:'准备中',recognizing:'云端识别中',generating:'本地生成中',ready:'等待保存',committing:'替换中',committed:'更新 Zotero 中',done:'已完成',failed:'处理失败',paused:'已暂停',cancelled:'已取消',retained:'已生成，未替换'};
-  const stages={waiting:'等待本地 PDF 处理',writing:'写入不可见文字层',saving:'保存 PDF 文件',checking:'校验 PDF 文字层',backup:'核对与保存备份',replacing:'替换原 PDF',indexing:'更新 Zotero 同步与全文索引',sidecars:'收纳 MD/JSON',applying:'校验、备份与替换',splitting:'准备 OCR 页段',remote:'等待云端解析结果'};
+  const stages={localLoading:'加载本机模型',localSaving:'整理全文 Markdown 与 JSON',local:'本机 PP-StructureV3 识别',waiting:'等待本地 PDF 处理',writing:'写入不可见文字层',saving:'保存 PDF 文件',checking:'校验 PDF 文字层',backup:'核对与保存备份',replacing:'替换原 PDF',indexing:'更新 Zotero 同步与全文索引',sidecars:'收纳 MD/JSON',applying:'校验、备份与替换',splitting:'准备 OCR 页段',remote:'等待云端解析结果'};
   const partLabels={new:'待提交',intent:'上传回执待确认',accepted:'等待云端状态',uploading:'上传中',waiting:'查询云端状态',pending:'云端排队中',running:'云端解析中',downloading:'下载识别结果',done:'结果已下载',rejected:'提交被拒绝'};
   function duration(seconds) {
     const n=Math.max(0,Math.floor(Number(seconds)||0));
     return n<60 ? `${n} 秒` : n<3600 ? `${Math.floor(n/60)} 分 ${n%60} 秒` : `${Math.floor(n/3600)} 小时 ${Math.floor(n%3600/60)} 分`;
   }
   function timing(job) {
+    if(job.mode==='local')return (job.localRun ? `${job.localRun.device} · ${job.localRun.reused ? '已复用模型' : '加载模型 '+duration(job.localRun.loadSeconds)}\n` : '')+`${job.state==='recognizing' ? '本机识别中' : '本机识别 '+duration(job.localSeconds)} · PDF 生成 ${duration(job.pdfSeconds)}`;
     const totals={uploading:0,pending:0,running:0,downloading:0,waiting:0};
     for(const part of job.parts||[])for(const k of Object.keys(totals))totals[k]+=Number(part.timing?.[k])||0;
     return `上传 ${duration(totals.uploading)} · 排队 ${duration(totals.pending)} · 解析 ${duration(totals.running)} · 下载 ${duration(totals.downloading)} · 查询等待 ${duration(totals.waiting)}\n云端流程用时 ${duration(job.apiSeconds)} · 本机 PDF ${duration(job.pdfSeconds)}`;
@@ -44,8 +45,8 @@ var RepairProgress = (()=>{
       const label=active.length ? active.map(s=>`第 ${s.number}/${parts.length} 段：${s.label}`).join('；') : stages.remote;
       return {label,text,value:known ? percent : null,tone:'active',stage};
     }
-    const counted=!phase && ['writing','checking'].includes(stage) && p.total>0;
-    const text=counted ? `${p.completed} / ${p.total} 页 · ${Math.floor(p.completed*100/p.total)}%（当前阶段）` :
+    const counted=!phase && ['local','writing','checking'].includes(stage) && p.total>0;
+    const text=stage==='local' && !p.completed ? '模型已就绪，正在识别第一页' : stage==='localSaving' ? '正在按页序保存识别结果' : counted ? `${p.completed} / ${p.total} 页 · ${Math.floor(p.completed*100/p.total)}%（当前阶段）` :
       stage==='remote' ? `已取得 ${p.completed||0} / ${job.pages} 页结果；当前页段尚无逐页进度` : job.message||'正在处理…';
     return {label:stages[stage]||labels[state]||state,text,value:counted ? p.completed*100/p.total : null,tone:'active',stage};
   }

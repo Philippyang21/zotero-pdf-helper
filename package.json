@@ -1,6 +1,6 @@
 {
   "name": "zotero-pdf-helper",
-  "version": "0.1.18",
+  "version": "0.1.20",
   "private": true,
   "description": "为 PDF 添加文字层、补全版权页书目信息，并在本地整理高亮引用文字。",
   "config": {

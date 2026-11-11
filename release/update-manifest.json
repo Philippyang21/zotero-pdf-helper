@@ -2,9 +2,9 @@
   "schemaVersion": 2,
   "published": false,
   "addonId": "paddleocr-pdf-repair@local.tools",
-  "latestVersion": "0.1.18",
+  "latestVersion": "0.1.20",
   "minZoteroVersion": "7.0",
   "maxZoteroVersion": "10.0.*",
-  "releaseNotes": "0.1.16保留jar配置读取修复，改用GitHub官方latest入口的HEAD跳转头、同标签manifest及XPI可用性HEAD，避免匿名REST API额度依赖。发现兼容新版后经确认打开具体Release，在Assets手动下载安装。本文件仅为辅助构建元数据，客户端不读取。",
-  "releaseUrl": "https://github.com/Philippyang21/zotero-pdf-helper/releases/tag/v0.1.18"
+  "releaseNotes": "新增本地部署接入，优化设置菜单，删除保存按钮并改为自动保存；README 补充接入教程。",
+  "releaseUrl": "https://github.com/Philippyang21/zotero-pdf-helper/releases/tag/v0.1.20"
 }

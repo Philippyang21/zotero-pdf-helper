@@ -39,9 +39,9 @@ macOS 使用 python3 或虚拟环境解释器。需要指定程序位置时，�
 
 ## 人工发布
 
-构建和测试不会创建 tag、推送、上传资产或发布 Release。没有 release 脚本或自动发布工作流；Scaffold 的发布入口也在配置中关闭。按 [发布指南](RELEASING.md) 审查产物，再由维护者手动操作。
+构建和测试不会创建 tag、推送、上传资产或发布 Release。Scaffold 的发布入口在配置中关闭；仓库的 `.github/workflows/release.yml` 在推送版本标签或人工触发时构建、验证并公开 Release，因此仅在审核通过后触发。按 [发布指南](RELEASING.md) 审查产物。
 
-native update_url 继续使用原有 HTTPS 占位；Scaffold 在本地生成的 update.json / update-beta.json 不是本项目手动检查更新清单，也不部署。手动更新仍由 plugin/update-config.json 与 release/update-manifest.json 管理。
+native update_url 继续使用原有 HTTPS 占位；Scaffold 在本地生成的 update.json / update-beta.json 不是本项目手动检查更新清单，也不部署。手动检查更新由 plugin/update-config.json 配置，读取 GitHub 最新正式版与同标签 manifest；release/update-manifest.json 仅为构建辅助元数据，客户端不读取。
 
 ## 复现文档配图
 

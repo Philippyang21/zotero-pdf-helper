@@ -138,7 +138,7 @@ def normalize(raw, expected_pages, markdown='', *, pdf_dimensions=None, legacy_s
     # Advisory only: OCR spelling/Markdown differences never gate replacement.
     compact = lambda s: re.sub(r'\s+', '', s)
     text_len = len(compact(''.join(l['text'] for p in normalized for l in p['lines'])))
-    md_len = len(compact(markdown))
+    md_len = len(compact(re.sub(r'data:image/[\w.+-]+;base64,[A-Za-z0-9+/=]+', '', markdown)))
     if md_len and (text_len < md_len*.45 or text_len > md_len*2.5):
         warnings.append('MD 与定位文本长度差异较大；仅记录提醒，不执行校对或再次 OCR')
     return normalized, list(dict.fromkeys(warnings))

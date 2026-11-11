@@ -51,6 +51,7 @@ app.version='0.1.11';
 const updateClient=POCRUpdates.createClient({addonId:app.id,currentVersion:()=>app.version,zoteroVersion:()=> '10.0.6',compareZotero:updateCompare,loadConfig:async()=>updateConfigValue,request:async()=>{updateRequests++;if(updateFailure){const error=new Error('offline fixture');if(typeof updateFailure==='string')error.code=updateFailure;throw error;}return {...updateFeed};},confirm:result=>{updatePrompts.push(result);return updateAnswer;},openURL:url=>updateOpened.push(url)});
 app.updates=updateClient;
 const tools=new AcademicTextUI(app);app.textTools=tools;Zotero.PaddleOCRRepair=app;tools.init();
+app.markdownSync={ready:true,enabled:false,status:{running:false,synced:0,failed:0},subscribe:()=>()=>{},async setEnabled(value){this.enabled=value;}};
 const results=[],assert=(ok,message)=>{if(!ok)throw new Error(message);};
 const run=async(name,fn)=>{try{await fn();results.push({name,passed:true});}catch(e){results.push({name,passed:false,error:String(e)});}};
 const nav=name=>document.querySelector('[data-page-target="'+name+'"]');let first;
@@ -79,31 +80,31 @@ window.addEventListener('load',async()=>{
   assert(el('text-preview-output').value.includes('朱自清认为，“诗教”'),'Chinese preview');
   assert(el('text-preview-output').value.includes('DOI: 10.1234/abc.2026.01'),'DOI');assert(saveCount===0&&ensured===0&&requests===0,'no backend');
  });
- await run('navigation preserves unsaved fields and preset/custom changes do not save',()=>{
+ await run('navigation preserves pending input and text changes save without configuring OCR',()=>{
   const before=writes.length;el('pocr-backupDir').value='example-only-backup';nav('files').click();nav('text').click();nav('files').click();
   assert(el('pocr-backupDir').value==='example-only-backup','unsaved retained');el('pocr-backupDir').value='';
   nav('text').click();el('text-preset').value='light';event(el('text-preset'),'change');assert(el('text-punctuation').value==='preserve','light');
   for(const mode of ['chinese','english','smart','preserve']){el('text-punctuation').value=mode;event(el('text-punctuation'),'change');assert(el('text-preset').value==='custom','custom');}
-  el('text-preset').value='paper';event(el('text-preset'),'change');assert(writes.length===before,'not saved');
+  el('text-preset').value='paper';event(el('text-preset'),'change');assert(writes.slice(before).every(key=>key.startsWith('text.'))&&configured===0,'text changes stay independent');
  });
  await run('text save is separate from OCR configuration and applies to ordinary PDF highlights',async()=>{
-  const before=ensured;el('text-save').click();first=await newHighlight(20);
+  const before=ensured;event(el('text-clean-new'),'change');first=await newHighlight(20);
   assert(persisted.get(20)==='中国文学，“史料”如此。'&&el('annotation-20').textContent===persisted.get(20),'actual saved simulated value');
-  assert(writes.every(key=>key.startsWith('text.'))&&ensured===before&&configured===0,'no OCR configure');
+  assert(ensured===before&&configured===0,'no OCR configure');
   assert(!document.querySelector('.pocr-cleaned-quote,[data-pocr-display]'),'no overlay');
  });
  await run('auto switch off skips future highlights but never restores saved values',async()=>{
-  el('text-clean-new').checked=false;el('text-save').click();await newHighlight(21);
+  el('text-clean-new').checked=false;event(el('text-clean-new'),'change');await newHighlight(21);
   assert(persisted.get(21)==='中国 文学, "史料"如此.'&&persisted.get(20)==='中国文学，“史料”如此。','future only');
  });
  await run('master off disables controls and preserves new annotation text',async()=>{
-  el('text-enabled').checked=false;event(el('text-enabled'),'change');el('text-save').click();await newHighlight(22);
+  el('text-enabled').checked=false;event(el('text-enabled'),'change');event(el('text-clean-new'),'change');await newHighlight(22);
   assert(el('text-clean-new').disabled&&el('text-preview-input').value===el('text-preview-output').value,'disabled preview');
   assert(persisted.get(22)==='中国 文学, "史料"如此.','unchanged');
-  el('text-enabled').checked=true;event(el('text-enabled'),'change');el('text-clean-new').checked=true;el('text-save').click();
+  el('text-enabled').checked=true;event(el('text-enabled'),'change');el('text-clean-new').checked=true;event(el('text-clean-new'),'change');
  });
  await run('later mode changes and manual annotation edits do not rewrite saved history',async()=>{
-  el('text-punctuation').value='english';event(el('text-punctuation'),'change');el('text-save').click();await newHighlight(23,'中文，研究。');
+  el('text-punctuation').value='english';event(el('text-punctuation'),'change');event(el('text-clean-new'),'change');await newHighlight(23,'中文，研究。');
   assert(persisted.get(23)==='中文, 研究.'&&persisted.get(20)==='中国文学，“史料”如此。','new mode only');
   first.annotationText='手工 编辑, 保留.';await first.saveTx({notifierData:{instanceID:reader._instanceID}});assert(persisted.get(20)==='手工 编辑, 保留.','manual edit');
  });
@@ -121,34 +122,43 @@ window.addEventListener('load',async()=>{
   assert(persisted.get(21)===untouched&&saveCount===before+1,'other history untouched');assert(notices.at(-1).includes('已保存 1 条'),'result feedback');
  });
  await run('current rules clean Chinese quote and PDF thin spaces in preview and old highlights',async()=>{
-  nav('text').click();el('text-preset').value='paper';event(el('text-preset'),'change');el('text-clean-new').checked=false;el('text-save').click();
+  nav('text').click();el('text-preset').value='paper';event(el('text-preset'),'change');el('text-clean-new').checked=false;event(el('text-clean-new'),'change');
   const old=await newHighlight(24,'制造 “碎片化” 与 “整体化” 的对立,洪\\u2009子诚。');
   const menu=[];events.get('createAnnotationContextMenu')({reader,params:{ids:[old.key]},append:item=>menu.push(item)});
   assert(persisted.get(24).includes(' “'),'auto off');confirmAnswer=true;await menu[2].onCommand();confirmAnswer=false;
   assert(persisted.get(24)==='制造“碎片化”与“整体化”的对立，洪子诚。','old highlight rules');
   nav('preview').click();el('text-preview-input').value='制造 “碎片化” 与 “整体化” 的对立。';event(el('text-preview-input'),'input');
   assert(el('text-preview-output').value==='制造“碎片化”与“整体化”的对立。','live preview same rules');
-  nav('text').click();el('text-clean-new').checked=true;el('text-save').click();
+  nav('text').click();el('text-clean-new').checked=true;event(el('text-clean-new'),'change');
  });
  await run('all four storage choices explain where files go without moving files',()=>{
   nav('files').click();const before=requests;
   for(const value of ['archive','hidden','import','link']){el('pocr-sidecars').value=value;event(el('pocr-sidecars'),'change');assert(el('pocr-sidecars-help').textContent.length>10,'storage explanation');}
   assert(requests===before,'no movement');el('pocr-sidecars').value='archive';event(el('pocr-sidecars'),'change');
  });
- await run('invalid hidden-page values reveal the right page before any preferences or token writes',async()=>{
-  const before=writes.length,tokens=tokenSaves;el('pocr-legacyPDFScale').value='9';nav('account').click();el('pocr-save').click();await tick();
-  assert(!el('pocr-page-legacy').hidden&&document.activeElement===el('pocr-legacyPDFScale'),'jump to error');
-  assert(writes.length===before&&tokenSaves===tokens,'no partial writes');el('pocr-legacyPDFScale').value='0';
-  el('pocr-baseURL').value='http://invalid.example';el('pocr-save').click();await tick();assert(!el('pocr-page-account').hidden,'service page');el('pocr-baseURL').value='https://paddleocr.aistudio-app.com';
+ await run('invalid input retains its saved value while other pages remain editable',async()=>{
+  nav('legacy').click();el('pocr-legacyPDFScale').value='9';event(el('pocr-legacyPDFScale'),'change');
+  assert(prefs.get('legacyPDFScale')==='0'&&el('pocr-legacyPDFScale').getAttribute('aria-invalid')==='true','invalid value not persisted');
+  nav('account').click();el('pocr-localPython').value='';el('pocr-baseURL').value='https://example.test';event(el('pocr-baseURL'),'change');
+  assert(prefs.get('baseURL')==='https://example.test'&&!el('pocr-page-account').hidden,'unfinished local path cannot block cloud');
+  el('pocr-baseURL').value='http://invalid.example';event(el('pocr-baseURL'),'change');
+  assert(prefs.get('baseURL')==='https://example.test','invalid URL retains prior value');
+  el('pocr-baseURL').value='https://paddleocr.aistudio-app.com';event(el('pocr-baseURL'),'change');
+  el('pocr-legacyPDFScale').value='0';event(el('pocr-legacyPDFScale'),'change');
  });
- await run('valid OCR save preserves blank token, all fields and does not launch new OCR',async()=>{
-  const before=tokenSaves;el('pocr-token').value='';el('pocr-save').click();await tick();
-  assert(tokenSaves===before&&storedToken==='fixture-only-token','blank retains secret');assert(prefs.get('concurrency')===1&&prefs.get('partConcurrency')===2,'numeric saved');
-  assert(ensured===0&&requests===0,'not launched');assert(el('pocr-message').textContent.includes('已保存'),'saved message');
+ await run('dropdown and checkbox settings persist immediately with no save buttons or OCR submission',async()=>{
+  assert(!el('pocr-save')&&!el('text-save'),'save buttons removed');
+  const before=tokenSaves;el('pocr-token').value='';event(el('pocr-token'),'change');
+  el('pocr-concurrency').value='2';event(el('pocr-concurrency'),'change');
+  assert(prefs.get('concurrency')===2,'dropdown persisted');
+  el('pocr-concurrency').value='1';event(el('pocr-concurrency'),'change');
+  assert(tokenSaves===before&&storedToken==='fixture-only-token','blank retains secret');
+  assert(ensured===0&&requests===0&&prefs.get('partConcurrency')===2,'no OCR submission');
  });
- await run('token replacement clears password field and active helper is configured only after saving',async()=>{
-  app.connection={};el('pocr-token').value='fixture-replacement';el('pocr-save').click();await tick();
-  assert(storedToken==='fixture-replacement'&&el('pocr-token').value==='','secret not echoed');assert(configured===1&&ensured===0,'configure only');app.connection=null;
+ await run('token replacement clears password field and configures only the active helper',async()=>{
+  app.connection={};el('pocr-token').value='fixture-replacement';event(el('pocr-token'),'change');await tick();
+  assert(storedToken==='fixture-replacement'&&el('pocr-token').value==='','secret not echoed');
+  assert(configured===1&&ensured===0,'configure only');app.connection=null;
  });
  await run('token deletion requires confirmation and does not remove files or tasks',async()=>{
   const before=tokenSaves;confirmAnswer=false;el('pocr-delete-token').click();await tick();assert(tokenSaves===before,'cancelled');
@@ -165,8 +175,26 @@ window.addEventListener('load',async()=>{
   el('text-preview-copy').click();el('text-preview-original').click();assert(copied.at(-2)==='中国文学。'&&copied.at(-1)==='中国 文学。','copy choices');assert(saveCount===before,'no saved quote');
  });
  await run('token read failure does not disable navigation or text settings',async()=>{
-  tokenReadFailure=true;nav('python').click();el('pocr-save').click();await tick();assert(el('pocr-token-state').textContent.includes('无法读取'),'read failure fallback');
-  nav('text').click();el('text-save').click();assert(el('text-settings-message').textContent.includes('已保存'),'text still works');tokenReadFailure=false;
+  tokenReadFailure=true;nav('account').click();el('pocr-token').value='fixture-read-failure';event(el('pocr-token'),'change');await tick();assert(el('pocr-token-state').textContent.includes('无法读取'),'read failure fallback');
+  nav('text').click();event(el('text-clean-new'),'change');assert(el('text-settings-message').textContent.includes('已自动保存'),'text still works');tokenReadFailure=false;
+ });
+ await run('text input is debounced and pending input flushes when leaving the pane',async()=>{
+  el('pocr-backupDir').value='fixture-pending';event(el('pocr-backupDir'),'input');
+  assert(prefs.get('backupDir')!=='fixture-pending','pending while typing');
+  window.dispatchEvent(new Event('pagehide'));
+  assert(prefs.get('backupDir')==='fixture-pending','pane close flushes pending preference');
+  el('pocr-backupDir').value='fixture-debounced';event(el('pocr-backupDir'),'input');
+  await new Promise(resolve=>setTimeout(resolve,550));
+  assert(prefs.get('backupDir')==='fixture-debounced','typing settles and saves');
+  el('pocr-backupDir').value='';event(el('pocr-backupDir'),'change');
+ });
+ await run('pending token writes serialize with replacements and deletion',async()=>{
+  const original=app.saveToken;let release;const gate=new Promise(resolve=>release=resolve);
+  app.saveToken=async value=>{await gate;await original(value);};
+  el('pocr-token').value='fixture-older';event(el('pocr-token'),'change');await tick();
+  el('pocr-token').value='fixture-newer';event(el('pocr-token'),'change');
+  confirmAnswer=true;el('pocr-delete-token').click();confirmAnswer=false;release();await tick();
+  assert(storedToken===''&&el('pocr-token').value==='','delete follows all queued saves');app.saveToken=original;
  });
  await run('shutdown unregisters new-item observer and retains saved annotation values',async()=>{
   await tools.shutdown();assert(events.size===0&&observers.size===0,'released');assert(persisted.get(23)==='中文, 研究.','no restore');
@@ -223,5 +251,5 @@ window.addEventListener('load',async()=>{
 });
 `;
 const scripts=modules+'\n'+source('updates.js')+'\n'+setup+'\n'+fs.readFileSync(path.join(root,'plugin/prefs.js'),'utf8')+'\n'+source('textUI.js')+'\n'+checks+'\n'+source('preferences.js')+'\n'+source('textPreferences.js')+'\n'+source('markdownPreferences.js')+'\n'+source('updatePreferences.js');
-const html='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>0.1.10 设置·离线验证</title><style>html{color-scheme:light dark}body{font:14px/1.6 system-ui;margin:24px;background:Canvas;color:CanvasText}#qa-status{font-size:12px;color:GrayText}#qa-result{white-space:pre-wrap;font-size:11px}</style><script>if(new URL(location.href).searchParams.has("light"))document.documentElement.style.colorScheme="light";</script></head><body><p id="qa-status">正在验证示例界面…</p>'+markup+'<div id="native-example" hidden></div><pre id="qa-result" hidden></pre><script>'+scripts.replace(/<\/script/gi,'<\\/script')+'</script></body></html>';
+const html='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>0.1.20 设置·离线验证</title><style>html{color-scheme:light dark}body{font:14px/1.6 system-ui;margin:24px;background:Canvas;color:CanvasText}#qa-status{font-size:12px;color:GrayText}#qa-result{white-space:pre-wrap;font-size:11px}</style><script>if(new URL(location.href).searchParams.has("light"))document.documentElement.style.colorScheme="light";</script></head><body><p id="qa-status">正在验证示例界面…</p>'+markup+'<div id="native-example" hidden></div><pre id="qa-result" hidden></pre><script>'+scripts.replace(/<\/script/gi,'<\\/script')+'</script></body></html>';
 fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,html);console.log(output);

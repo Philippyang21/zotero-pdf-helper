@@ -16,6 +16,7 @@ from .api import OfficialAPI, RemoteError, collect, BASE_URL, MODELS, OPTIONS
 from .files import atomic_json, read_json, digest, verified_copy, replace_file
 from .pdf import inspect, generate, validate, PDF_LOCK
 from .schema import normalize
+from . import local_structure
 
 MAX_BYTES = 50_000_000
 TARGET_BYTES = 48_000_000
@@ -44,6 +45,7 @@ class Engine:
         self.ocr_locks = {}
         self.cancelled = set()
         self.progress_saved = {}
+        self.model_session = local_structure.ModelSession(self.root)
         self.remote_slots = threading.BoundedSemaphore(2)
         self.activities, self.api_started = {}, {}
         self.api_factory = api_factory
@@ -57,7 +59,7 @@ class Engine:
             if job['state'] in ('queued','preparing','recognizing','generating','committing'):
                 job['recoverable'] = True
                 job['state'] = 'paused'
-                job['message'] = '进程中断；恢复只查询已提交任务，不自动重交'
+                job['message'] = '本地识别中断；将从已完成页面继续' if job['mode']=='local' else '进程中断；恢复只查询已提交任务，不自动重交'
             self.jobs[job['id']] = job
         self._recover_commits()
 
@@ -97,6 +99,13 @@ class Engine:
                 raise ValueError('不支持的识别结果保存方式')
             if 'token' in values:
                 self.token = values['token']
+            retain = None
+            if values.get('localKeepModel') is True:
+                try:
+                    retain = local_structure.settings(values)
+                except ValueError:
+                    pass  # Invalid model settings should not block merging existing sidecars.
+            self.model_session.configure(retain)
             self.remote_paused = False
             for job in self.jobs.values():
                 if job.pop('recoverable',False):
@@ -140,7 +149,7 @@ class Engine:
 
     def create(self, values):
         mode = values.get('mode')
-        if mode not in ('ocr','merge'):
+        if mode not in ('ocr','merge','local'):
             raise ValueError('不支持的任务模式')
         path = Path(values['pdf']).resolve(strict=True)
         if path.suffix.lower() != '.pdf':
@@ -148,6 +157,9 @@ class Engine:
         # Inspection/hashing runs in the HTTP request thread, never the Zotero UI thread.
         info = inspect(path)
         model = values.get('model','PP-StructureV3')
+        local = local_structure.settings(values) if mode == 'local' else None
+        if local:
+            model = 'PP-StructureV3'
         if model not in MODELS:
             raise ValueError('不支持的官方文档解析模型')
         json_path, md_path, sidecar_hash = None, None, ''
@@ -163,7 +175,8 @@ class Engine:
                 if (previous['target']==str(path) and previous['mode']==mode and same_content
                     and previous.get('sidecarHash','')==sidecar_hash and previous['model']==model
                     and previous.get('legacyPDFScale',0)==self.config['legacyPDFScale']
-                    and previous['baseURL']==self.config['baseURL']):
+                    and previous.get('localSettings') == local
+                    and (local or previous['baseURL']==self.config['baseURL'])):
                     # An explicit retry resumes this job; never silently submit another POST.
                     if (previous['state'] in ('done','committed') and
                         info['sha256']==previous['sourceHash'] and info['sha256']!=previous.get('outputHash')):
@@ -181,6 +194,8 @@ class Engine:
                 legacyPDFScale=self.config['legacyPDFScale'],
                 sidecars=self.config['sidecars'], sidecarHash=sidecar_hash, parts=[],
                 apiSeconds=0, pdfSeconds=0, message='准备后台任务')
+            if local:
+                job['localSettings'] = local
             directory = self.directory(job)
             directory.mkdir(parents=True)
             # Preserve a stable source for rendering and for subsequent local regenerations.
@@ -204,11 +219,21 @@ class Engine:
         with self.lock:
             if self.stopping:
                 return
+            # Allow one local + one remote job to run simultaneously.
+            # Local jobs still serialize (one model process); remote jobs respect concurrency.
+            local_running = any(self.jobs[i]['mode']=='local' for i in self.running)
+            remote_running = sum(1 for i in self.running if self.jobs[i]['mode']!='local')
             for job in self.jobs.values():
-                if len(self.running) >= self.config['concurrency']:
-                    break
                 if job['id'] in self.running or job['state'] != 'queued':
                     continue
+                if job['mode']=='local':
+                    if local_running:
+                        continue  # One loaded model per helper.
+                    local_running = True
+                else:
+                    if remote_running >= self.config['concurrency']:
+                        continue
+                    remote_running += 1
                 directory = self.directory(job)
                 cache = self.root/'cache'/self._cache_key(job)
                 local_results = any((p/'result.json').exists() and (p/'result.md').exists() for p in (directory,cache))
@@ -228,6 +253,16 @@ class Engine:
                     guard = self.ocr_locks.setdefault(key,threading.Lock())
                 with guard:
                     self._ocr(job)
+            elif job['mode']=='local' and not all((directory/file).is_file() for file in ('result.md','result.json')):
+                self.save(job,state='recognizing',message='正在准备本机 PP-StructureV3 识别')
+                self.progress(job,'local',0,job['pages'])
+                started = time.monotonic()
+                try:
+                    run = self.model_session.recognize(job['localSettings'],directory,job['pages'],
+                        lambda:self.check_cancel(job),lambda *args:self.progress(job,*args))
+                    self.save(job,localRun=run)
+                finally:
+                    self.save(job,localSeconds=round(job.get('localSeconds',0)+time.monotonic()-started,3))
             self.check_cancel(job)
             self.save(job,state='generating',message='本地生成不可见文字层')
             started = time.monotonic()
@@ -245,7 +280,7 @@ class Engine:
             if self.stopping and job['id'] not in self.cancelled:
                 self.save(job,state='paused',recoverable=True,message='Zotero 退出；下次启动恢复原任务及已有结果')
             else:
-                self.save(job,state='cancelled',message='已取消本地处理；远端已提交任务可能继续，恢复时仍复用原任务')
+                self.save(job,state='cancelled',message='已取消本地识别；恢复时复用已完成页面' if job['mode']=='local' else '已取消本地处理；远端已提交任务可能继续，恢复时仍复用原任务')
         except PauseTask as exc:
             self.save(job,state='paused',message=str(exc))
         except (httpx.HTTPError, RemoteError) as exc:
@@ -545,7 +580,7 @@ class Engine:
                 return copy.deepcopy(job)
             self.cancelled.add(ident)
             if ident not in self.running:
-                self.save(job,state='cancelled',message='已取消；远端任务 ID 与识别结果保留')
+                self.save(job,state='cancelled',message='已取消；已有识别结果保留')
             return copy.deepcopy(job)
 
     def commit(self, ident, retain=False):
@@ -631,5 +666,6 @@ class Engine:
     def close(self):
         self.stopping = True
         self.pool.shutdown(wait=True,cancel_futures=True)
+        self.model_session.configure(None)
         for client in self.api_clients.values():
             client.close()

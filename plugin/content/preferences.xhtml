@@ -21,6 +21,7 @@
    </html:nav>
    <html:main class="pocr-main">
     <html:p id="pocr-settings-location" class="pocr-location">阅读与引用 / 高亮与复制</html:p>
+     <html:p class="pocr-help" style="margin:0 0 10px">设置修改后自动保存；输入文字后稍等片刻，访问令牌在离开输入框后保存。</html:p>
     <html:div id="pocr-text-settings" data-settings-group="text">
      <html:section id="pocr-page-text" data-settings-page="text" class="pocr-page" aria-labelledby="pocr-title-text">
       <html:header class="pocr-page-title"><html:span class="pocr-badge">本机处理 · 不消耗 OCR 额度</html:span><html:h2 id="pocr-title-text">高亮与复制</html:h2><html:p>整理摘录里的误换行、多余空格和标点，方便用于论文和笔记。所有能选中文字、创建高亮的 PDF 都可以用。</html:p></html:header>
@@ -57,20 +58,35 @@
       <html:p class="pocr-help">网址、DOI、邮箱、小数和版本号等会自动保护。诗歌、旧式排版和严格引文仍建议核对原文。</html:p>
      </html:section>
      <html:section id="pocr-page-preview" data-settings-page="preview" class="pocr-page" hidden="hidden" aria-labelledby="pocr-title-preview">
-      <html:header class="pocr-page-title"><html:span class="pocr-badge">预览不保存 · 不上传</html:span><html:h2 id="pocr-title-preview">先试一段文字</html:h2><html:p>这里使用你在“高亮与复制”中选择的规则，包括尚未保存的调整。预览和复制都不会修改文献或注释。</html:p></html:header>
+      <html:header class="pocr-page-title"><html:span class="pocr-badge">预览不保存 · 不上传</html:span><html:h2 id="pocr-title-preview">先试一段文字</html:h2><html:p>这里使用你在“高亮与复制”中选择的当前规则。预览和复制都不会修改文献或注释。</html:p></html:header>
       <html:div class="pocr-card"><html:label class="pocr-field" for="text-preview-input"><html:span>原文</html:span><html:textarea id="text-preview-input" rows="7"></html:textarea></html:label><html:label class="pocr-field" for="text-preview-output"><html:span>整理后</html:span><html:textarea id="text-preview-output" rows="7" readonly="readonly"></html:textarea></html:label><html:div class="pocr-actions"><html:button type="button" id="text-preview-copy">复制整理后文字</html:button><html:button type="button" id="text-preview-original">复制原始文字</html:button></html:div></html:div>
      </html:section>
-     <html:footer class="pocr-savebar"><html:button type="button" id="text-save" class="pocr-primary">保存引用整理设置</html:button><html:p id="text-settings-message" role="status" aria-live="polite"></html:p></html:footer>
+     <html:footer class="pocr-savebar"><html:p id="text-settings-message" role="status" aria-live="polite"></html:p></html:footer>
     </html:div>
     <html:div id="pocr-ocr-settings" data-settings-group="ocr" hidden="hidden">
      <html:section id="pocr-page-account" data-settings-page="account" class="pocr-page" hidden="hidden" aria-labelledby="pocr-title-account">
-      <html:header class="pocr-page-title"><html:span class="pocr-badge">需要新识别扫描件时设置</html:span><html:h2 id="pocr-title-account">账号与模型</html:h2><html:p>云端负责识别文字，本机负责生成可搜索 PDF。如果只合并已有 MD/JSON，不需要填写访问令牌。</html:p></html:header>
-      <html:div class="pocr-card"><html:h3>连接云端识别服务</html:h3>
+      <html:header class="pocr-page-title"><html:span class="pocr-badge">本机 + 云端可同时使用</html:span><html:h2 id="pocr-title-account">账号与模型</html:h2><html:p>配置本机和云端识别方式。右键 PDF 附件可选择使用哪种方式识别，两者可同时运行。已有 MD/JSON 仍可直接合并。</html:p></html:header>
+      <html:div class="pocr-card"><html:h3>本机 PP-StructureV3 识别</html:h3>
+       <html:label class="pocr-check"><html:input id="pocr-localEnabled" type="checkbox" /><html:span>启用本机识别<html:small>关闭后右键菜单中的"本机识别"不可用；云端识别不受影响。</html:small></html:span></html:label>
+       <html:div id="pocr-local-fields">
+        <html:label class="pocr-field"><html:span>PaddleOCR 部署目录或 Python 程序</html:span><html:input id="pocr-localPython" type="text" spellcheck="false" placeholder="选择部署目录，或粘贴已安装 PaddleOCR 的 Python 完整路径" /></html:label>
+        <html:button type="button" id="pocr-local-browse">选择目录…</html:button>
+        <html:label class="pocr-field"><html:span>运行设备</html:span><html:select id="pocr-localDevice"><html:option value="auto">自动（有可用 CUDA GPU 时使用，否则用 CPU）</html:option><html:option value="cpu">CPU</html:option><html:option value="gpu:0">第一块 CUDA GPU</html:option></html:select></html:label>
+        <html:label class="pocr-check"><html:input id="pocr-localFormula" type="checkbox" /><html:span>公式识别<html:small>把数学公式转换为 LaTeX。纯文字材料可关闭以减少模型占用。</html:small></html:span></html:label>
+        <html:label class="pocr-check"><html:input id="pocr-localKeepModel" type="checkbox" /><html:span>连续处理加速<html:small>保留已加载的模型，供下一份同配置 PDF 使用。关闭后会在当前识别结束时释放内存或显存。</html:small></html:span></html:label>
+        <html:details><html:summary>自定义模型位置（通常留空）</html:summary>
+         <html:label class="pocr-field"><html:span>PaddleX 缓存目录</html:span><html:input id="pocr-localCache" type="text" placeholder="包含 official_models 的目录" /></html:label>
+         <html:label class="pocr-field"><html:span>PP-StructureV3 配置文件</html:span><html:input id="pocr-localConfig" type="text" placeholder="自定义模型可填写本机 YAML 文件完整路径" /></html:label>
+        </html:details>
+        <html:button type="button" id="pocr-local-check">检测本地环境</html:button><html:p id="pocr-local-state" role="status" class="pocr-help"></html:p>
+       </html:div>
+      </html:div>
+      <html:div class="pocr-card" id="pocr-cloud-account"><html:h3>连接云端识别服务</html:h3>
        <html:label class="pocr-field" for="pocr-baseURL"><html:span>识别服务地址</html:span><html:input id="pocr-baseURL" type="url" spellcheck="false" /></html:label><html:p class="pocr-help">使用官方服务时保持默认地址。只有使用可信代理时才修改，必须以 https:// 开头；令牌会发送到这个地址。</html:p>
        <html:label class="pocr-field" for="pocr-token"><html:span>AI Studio 访问令牌（Access Token）</html:span><html:input id="pocr-token" type="password" autocomplete="off" placeholder="更换时填写；留空保留已有令牌" /></html:label><html:p id="pocr-token-state" class="pocr-help" role="status">正在检查令牌状态…</html:p><html:p class="pocr-help">在 AI Studio 账户中取得后粘贴到这里。令牌类似账户密码，不要截图或发给别人；保存后不会显示完整内容。</html:p>
        <html:div class="pocr-actions"><html:button type="button" id="pocr-delete-token" class="pocr-danger">删除已保存的令牌</html:button></html:div>
       </html:div>
-      <html:div class="pocr-card"><html:h3>使用哪个识别模型</html:h3><html:label class="pocr-field" for="pocr-model"><html:span>默认模型</html:span><html:select id="pocr-model"><html:option>PP-StructureV3</html:option><html:option>PaddleOCR-VL</html:option><html:option>PaddleOCR-VL-1.5</html:option><html:option>PaddleOCR-VL-1.6</html:option></html:select></html:label></html:div>
+      <html:div class="pocr-card" id="pocr-cloud-model"><html:h3>使用哪个识别模型</html:h3><html:label class="pocr-field" for="pocr-model"><html:span>默认模型</html:span><html:select id="pocr-model"><html:option>PP-StructureV3</html:option><html:option>PaddleOCR-VL</html:option><html:option>PaddleOCR-VL-1.5</html:option><html:option>PaddleOCR-VL-1.6</html:option></html:select></html:label></html:div>
      </html:section>
      <html:section id="pocr-page-speed" data-settings-page="speed" class="pocr-page" hidden="hidden" aria-labelledby="pocr-title-speed">
       <html:header class="pocr-page-title"><html:h2 id="pocr-title-speed">识别速度与提醒</html:h2><html:p>控制同时发送多少任务。云端排队时间取决于服务状态，增加并行数不保证固定提速。</html:p></html:header>
@@ -100,7 +116,7 @@
       <html:div class="pocr-card"><html:h3>清理临时缓存</html:h3><html:p class="pocr-help">只删除可以重新生成的派生缓存。任务记录、原始响应、MD/JSON、PDF 和恢复备份都会保留。</html:p><html:div class="pocr-actions"><html:button type="button" id="pocr-clear-cache">清理派生缓存…</html:button></html:div></html:div>
       <html:div class="pocr-card"><html:h3>数据与安全</html:h3><html:p class="pocr-help">访问令牌由 Zotero 的密码管理功能保存，不写进任务日志。后台服务只监听本机，并使用随机凭证。</html:p><html:p class="pocr-help">任务与备份在 Zotero 配置目录的 <html:code>paddleocr-pdf-repair</html:code> 文件夹中，请保护好操作系统账户和此目录。已提交的云端任务不能通过“取消”退回额度。</html:p></html:div>
      </html:section>
-     <html:footer class="pocr-savebar"><html:button type="button" id="pocr-save" class="pocr-primary">保存 OCR / PDF 设置</html:button><html:p id="pocr-message" role="status" aria-live="polite"></html:p></html:footer>
+     <html:footer class="pocr-savebar"><html:p id="pocr-message" role="status" aria-live="polite"></html:p></html:footer>
     </html:div>
     <html:div data-settings-group="updates" hidden="hidden">
      <html:section id="pocr-page-updates" data-settings-page="updates" class="pocr-page" hidden="hidden" aria-labelledby="pocr-title-updates">

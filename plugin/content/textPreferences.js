@@ -39,10 +39,16 @@ function pocrBindTextPrefs(){
   });
   for(const field of [...rules,el('text-punctuation')])field.addEventListener('change',()=>{el('text-preset').value='custom';preview();});
   el('text-enabled').addEventListener('change',preview);el('text-preview-input').addEventListener('input',preview);
-  el('text-save').addEventListener('click',()=>{
-    try{tools.saveOptions(read(),el('text-clean-new').checked);el('text-settings-message').textContent='已保存。新高亮和手动处理选中高亮使用这些规则；已有注释不会自动改写。';}
-    catch(_){el('text-settings-message').textContent='设置未能保存，请重试；原文未修改。';}
-  });
+  // Checkbox and select changes are complete values; persist them immediately.
+  const autoSave=()=>{
+      try{tools.saveOptions(read(),el('text-clean-new').checked);el('text-settings-message').textContent='设置已自动保存。新高亮和手动处理选中高亮使用这些规则；已有注释不会自动改写。';}
+      catch(_){el('text-settings-message').textContent='设置未能保存，请重试；原文未修改。';}
+  };
+  el('text-enabled').addEventListener('change',autoSave);
+  el('text-clean-new').addEventListener('change',autoSave);
+  el('text-preset').addEventListener('change',autoSave);
+  el('text-punctuation').addEventListener('change',autoSave);
+  for(const rule of rules)rule.addEventListener('change',autoSave);
   for(const [id,rawOnly] of [['text-preview-copy',false],['text-preview-original',true]])el(id).addEventListener('click',()=>{
     try{tools.copy(el('text-preview-input').value,rawOnly,read());el('text-settings-message').textContent='已复制到剪贴板';}
     catch(e){el('text-settings-message').textContent=e.message;}

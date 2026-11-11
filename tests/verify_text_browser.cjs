@@ -7,5 +7,5 @@ const match=html.match(/<pre id="qa-result"[^>]*>(.*?)<\/pre>/s);assert.ok(match
 const result=JSON.parse(match[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
 for(const check of result.results)console.log((check.passed?'PASS ':'FAIL ')+check.name+(check.error?' — '+check.error:''));
 assert.equal(result.passed,true,'One or more browser UI checks failed');
-assert.equal(result.results.length,29,'Unexpected number of UI checks');
+assert.equal(result.results.length,31,'Unexpected number of UI checks');
 console.log(result.count+'/'+result.count+' browser DOM checks passed');

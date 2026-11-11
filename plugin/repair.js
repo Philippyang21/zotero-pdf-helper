@@ -92,7 +92,8 @@ var PDFRepair = class {
       popup.appendChild(node); nodes.push(node); return node;
     };
     const sep = doc.createXULElement('menuseparator'); popup.appendChild(sep); nodes.push(sep);
-    menu('PaddleOCR 识别并替换为可检索 PDF',()=>this.submitSelected(win,'ocr'));
+    menu('本机 PP-StructureV3 识别并替换为可检索 PDF',()=>this.submitSelected(win,'local'));
+    menu('云端识别并替换为可检索 PDF',()=>this.submitSelected(win,'ocr'));
     menu('合并已有 MD/JSON，生成可检索 PDF',()=>this.submitSelected(win,'merge'));
     menu('识别版权页并补全文献条目',()=>this.copyrightSelected(win));
     menu('查看 PDF OCR Helper 任务状态',()=>this.openStatus(win));
@@ -147,11 +148,13 @@ var PDFRepair = class {
       try {
         this.connection=await IOUtils.readJSON(this.descriptor);
         const health=await this.request('GET','/health',undefined,1500);
-        if (health.version!==this.version) throw new Error('辅助程序版本不同，请退出 Zotero 并稍后重启');
+        if (health.version!==this.version) throw new Error('辅助程序版本不同，正在重新启动…');
         await this.configure(); return;
       } catch (error) {
         this.connection=null;
-        if (error.message.includes('版本不同')) throw error;
+        // Version mismatch or stale helper: shut it down and re-extract.
+        try { await this.request('POST','/shutdown',{},1000); } catch (_) {}
+        try { await IOUtils.remove(this.descriptor); } catch (_) {}
       }
     }
     const executable=await this.findPython();
@@ -303,10 +306,16 @@ var PDFRepair = class {
     await IOUtils.writeUTF8(PathUtils.join(folder,'.complete'),'ready');
     return launcher;
   }
+  localOptions() {
+    const keys=['localPython','localDevice','localCache','localConfig','localFormula'];
+    return Object.fromEntries(keys.map(key=>[key,this.pref(key)]));
+  }
   async configure() {
     const settings={};
     for (const key of ['baseURL','concurrency','partConcurrency','dailyThreshold','autoReplace','sidecars','legacyPDFScale']) settings[key]=this.pref(key);
     settings.backupDir=this.pref('backupDir') || PathUtils.join(this.data,'backups');
+    // Always configure both local and cloud backends; per-job mode decides which is used.
+    Object.assign(settings,this.localOptions(),{localKeepModel:this.pref('localKeepModel')});
     settings.token=await this.token();
     await this.request('POST','/configure',settings);
   }
@@ -480,12 +489,14 @@ var PDFRepair = class {
       const info=await this.request('POST','/inspect',{pdf});
       const pair=await this.matching(item,pdf,win,mode==='merge',info.sha256);
       if (pair===false) continue;
-      let selectedMode=pair ? 'merge' : mode;
+      const selectedMode=pair ? 'merge' : mode;
       if (selectedMode==='ocr' && !await this.token()) throw new Error('请先在 Zotero 设置 → PDF OCR Helper 中保存 AI Studio Access Token');
-      this.notify((selectedMode==='ocr' ? '预计提交 OCR：' : '复用 MD/JSON，本次 OCR 页数为 0；PDF 共 ')+info.pages+' 页');
+      if (selectedMode==='local' && !this.pref('localPython')) throw new Error('请先在 Zotero 设置 → PDF OCR Helper 中配置本机 PaddleOCR 部署目录或 Python 路径');
+      this.notify((selectedMode==='ocr' ? '预计提交云端 OCR：' : selectedMode==='local' ? '使用本机 PP-StructureV3 识别：' : '复用 MD/JSON，本次 OCR 页数为 0；PDF 共 ')+info.pages+' 页');
       // Yield before the submission request so the estimate is visible first.
       await Zotero.Promise.delay(150);
       const job=await this.request('POST','/jobs',{mode:selectedMode,pdf,...(pair||{}),
+        ...(selectedMode==='local' ? this.localOptions() : {}),
         model:this.pref('model'),attachment:{id:item.id,key:item.key,libraryID:item.libraryID},parent:item.parentID},120000);
       this.pending=true;
       this.focusJobID=job.id;

@@ -26,7 +26,7 @@ function render(state) {
     const view=RepairProgress.view(job,app.finalizePhase.get(job.id),app.finalizeErrors.get(job.id));
     const row=node('tr');row.className=(selectedID===job.id ? 'selected ' : '')+view.tone;
     row.tabIndex=0;row.setAttribute('aria-selected',String(selectedID===job.id));
-    const name=node('td');name.append(node('strong',job.target.split(/[\\/]/).pop()),node('div',`${job.pages} 页 · ${job.mode==='merge' ? '合并已有结果 · OCR 0 页' : job.model}`,'muted'));
+    const name=node('td');name.append(node('strong',job.target.split(/[\\/]/).pop()),node('div',`${job.pages} 页 · ${job.mode==='merge' ? '合并已有结果 · OCR 0 页' : job.mode==='local' ? '本机 PP-StructureV3' : job.model}`,'muted'));
     const status=node('td');status.append(node('span',view.label,'badge '+view.tone));
     const progress=node('td');progress.append(bar(view),node('div',view.text,'muted'));
     const time=node('td',RepairProgress.timing(job),'timing');
@@ -36,11 +36,12 @@ function render(state) {
   }
   el('empty').hidden=jobs.length>0;
   const job=selected();el('selected-panel').hidden=!job;
-  for(const id of ['resume','cancel','apply','open','sidecars','organize','archive'])el(id).disabled=!job;
+  for(const id of ['resume','cancel','apply','open','open-md','open-json','sidecars','organize','archive'])el(id).disabled=!job;
   if(!job)return;
   el('resume').disabled=!['failed','paused','cancelled'].includes(job.state);
   el('cancel').disabled=!['queued','preparing','recognizing','generating','ready'].includes(job.state);
   el('apply').disabled=!['ready','committed'].includes(job.state);
+  el('open-md').disabled=!job.md;el('open-json').disabled=!job.json;
   el('open').disabled=!job.output;el('sidecars').disabled=!job.json;
   el('organize').disabled=!['done','retained'].includes(job.state);
   const view=RepairProgress.view(job,app.finalizePhase.get(job.id),app.finalizeErrors.get(job.id));
@@ -57,7 +58,7 @@ function render(state) {
   }
   el('segment-panel').hidden=!(job.parts||[]).length;
   el('steps').replaceChildren();
-  const stepIndex={queued:0,preparing:0,splitting:0,recognizing:1,remote:1,waiting:2,generating:2,writing:2,saving:3,checking:3,ready:3,sidecars:3,applying:3,backup:3,replacing:3,committing:3,indexing:3,committed:3,complete:4}[view.stage];
+  const stepIndex={queued:0,preparing:0,splitting:0,recognizing:1,remote:1,local:1,localLoading:1,localSaving:1,waiting:2,generating:2,writing:2,saving:3,checking:3,ready:3,sidecars:3,applying:3,backup:3,replacing:3,committing:3,indexing:3,committed:3,complete:4}[view.stage];
   for(const [i,text] of ['准备','识别 / 复用','写入文字','保存与更新','完成'].entries())el('steps').append(node('span',text,i===stepIndex ? 'current' : i<stepIndex ? 'passed' : ''));
   const receipt=app.receipts[job.id]||{};
   const storage={archive:'独立存档条目（Zotero 文件同步）',hidden:'插件本地隐藏目录（不随库同步）',import:'原文献下的存储附件',link:'原文献下的链接附件（文件不随库同步）'}[receipt.storage||job.sidecars]||job.sidecars;
@@ -79,6 +80,9 @@ window.addEventListener('load',async()=>{
   el('cancel').onclick=action(async()=>{await app.jobAction(requireJob().id,'cancel');});
   el('apply').onclick=action(async()=>{const job=requireJob();app.finalizeErrors.delete(job.id);await app.finalize(job);await app.tick();});
   el('open').onclick=action(async()=>{const job=requireJob();if(!job.output)throw new Error('尚未生成 PDF');app.openPath(job.output);});
+  for(const kind of ['md','json'])el('open-'+kind).onclick=action(async()=>{
+    const file=requireJob()[kind];if(file)app.openPath(file);
+  });
   el('sidecars').onclick=action(async()=>{const job=requireJob();if(!job.json)throw new Error('识别结果尚未就绪');app.openPath(app.resultFolder(job));});
   el('organize').onclick=action(async()=>{await app.organizeSidecars(requireJob());el('message').textContent='MD/JSON 已收纳，PDF 无需重新转换。';render(app.state);});
   el('archive').onclick=action(async()=>{await app.showArchive(requireJob());});

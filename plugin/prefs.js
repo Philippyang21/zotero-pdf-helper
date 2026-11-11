@@ -1,4 +1,11 @@
 pref('extensions.paddleocrrepair.baseURL', 'https://paddleocr.aistudio-app.com');
+pref('extensions.paddleocrrepair.localEnabled', true);
+pref('extensions.paddleocrrepair.localPython', '');
+pref('extensions.paddleocrrepair.localFormula', true);
+pref('extensions.paddleocrrepair.localKeepModel', false);
+pref('extensions.paddleocrrepair.localDevice', 'auto');
+pref('extensions.paddleocrrepair.localCache', '');
+pref('extensions.paddleocrrepair.localConfig', '');
 pref('extensions.paddleocrrepair.model', 'PP-StructureV3');
 pref('extensions.paddleocrrepair.dailyThreshold', 20000);
 pref('extensions.paddleocrrepair.concurrency', 1);

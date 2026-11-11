@@ -49,7 +49,7 @@ var AcademicTextUI = class {
   }
   async saveSelected(reader,ids){
     const options=this.getOptions();
-    if(!options.enabled){this.app.alert('请先在“阅读与引用 → 高亮与复制”中开启引用文本整理，并保存设置。');return;}
+    if(!options.enabled){this.app.alert('请先在“阅读与引用 → 高亮与复制”中开启引用文本整理。');return;}
     const selected=this.annotations.selected(reader,ids);
     if(!selected.length){this.app.alert('没有可处理的高亮。请选择当前 PDF 中可编辑的高亮或下划线。');return;}
     if(!this.app.confirm(`将按当前已保存的规则整理选中的 ${selected.length} 条高亮/下划线，并保存到 Zotero 注释。\n\n只处理选中项，不修改 PDF、评论或其他高亮；不保留修改前的副本。是否继续？`))return;

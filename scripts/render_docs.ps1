@@ -13,7 +13,7 @@ $shots=@(
   @{Name='installation';Page='installation.html';Height=560},
   @{Name='text-settings';Page='settings.html?page=text&light=1';Height=1160},
   @{Name='text-preview';Page='settings.html?page=preview&light=1';Height=980},
-  @{Name='ocr-settings';Page='settings.html?page=account&light=1';Height=900},
+  @{Name='ocr-settings';Page='settings.html?page=account&light=1';Height=1680},
   @{Name='python-settings';Page='settings.html?page=python&light=1';Height=840},
   @{Name='task-progress';Page='progress.html';Height=980}
 )

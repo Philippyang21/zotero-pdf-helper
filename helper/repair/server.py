@@ -9,6 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from . import __version__
 from .engine import Engine
+from .local_structure import probe
 from .files import atomic_json
 from .pdf import inspect
 from .copyright import extract as extract_copyright
@@ -94,6 +95,8 @@ def serve(data, connection):
                     raise ValueError('请求必须为对象')
                 if self.path=='/configure':
                     result = engine.configure(values)
+                elif self.path=='/local/check':
+                    result = probe(values)
                 elif self.path=='/inspect':
                     result = inspect(values['pdf'])
                 elif self.path=='/metadata/copyright':
